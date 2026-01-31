@@ -6,7 +6,7 @@ Get the entire EDRS system running with one command!
 
 - Docker 20.10+ and Docker Compose 2.0+
 - At least 4GB of available RAM
-- Ports 8080-8090, 5433 (PostgreSQL), 9092, 9093, 16686, 4317-4318 available
+- Ports 8080-8090, 5433 (PostgreSQL), 9094 (Kafka), 9093, 16686, 4317-4318 available
 
 ## One Command to Rule Them All
 
@@ -86,7 +86,7 @@ If services don't start:
 
 1. **Check ports are available**:
    ```bash
-   netstat -an | grep -E "8080|8081|8082|8083|8084|5432|9092"
+   netstat -an | grep -E "8080|8081|8082|8083|8084|5433|9094"
    ```
 
 2. **Check Docker resources**:

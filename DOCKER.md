@@ -6,7 +6,7 @@ This guide explains how to deploy the EDRS system using Docker and Docker Compos
 
 - Docker 20.10+ and Docker Compose 2.0+
 - At least 4GB of available RAM
-- Ports 8080-8090, 5433 (PostgreSQL), 9092, 9093, 16686, 4317-4318 available
+- Ports 8080-8090, 5433 (PostgreSQL), 9094 (Kafka), 9093, 16686, 4317-4318 available
 
 ## Quick Start
 
@@ -94,7 +94,7 @@ export POSTGRES_PORT=5433  # Default is 5433 to avoid conflicts with host Postgr
 ### Kafka Configuration
 
 ```bash
-export KAFKA_PORT=9092
+export KAFKA_PORT=9094  # Default is 9094 to avoid conflicts with host Kafka
 ```
 
 ### Service Configuration
@@ -161,7 +161,7 @@ docker-compose logs --tail=100 reservation-service
 1. **Check port conflicts**:
    ```bash
    # Check if ports are in use
-   netstat -an | grep -E "8080|8081|8082|8083|8084|5432|9092"
+   netstat -an | grep -E "8080|8081|8082|8083|8084|5433|9094"
    ```
 
 2. **Check Docker resources**:
@@ -191,7 +191,7 @@ If services can't connect to Kafka:
 
 3. **Verify Kafka is accessible**:
    ```bash
-   docker exec -it edrs-kafka kafka-broker-api-versions --bootstrap-server localhost:9092
+   docker exec -it edrs-kafka kafka-broker-api-versions --bootstrap-server localhost:29092
    ```
 
 ### Database Connection Issues

@@ -28,7 +28,7 @@ services:
     image: confluentinc/cp-kafka:7.5.0
     container_name: edrs-kafka
     ports:
-      - "${KAFKA_PORT:-9092}:9092"
+      - "${KAFKA_PORT:-9094}:9092"
       - "9093:9093"  # Controller listener
     environment:
       # KRaft mode configuration
