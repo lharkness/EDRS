@@ -67,14 +67,7 @@ processors:
       - key: service.namespace
         value: edrs
         action: upsert
-
-  # Transform processor to convert Prometheus metrics to OTLP format
-  transform:
-    metric_statements:
-      # Add service name from job label (keep original "service" attribute as well)
-      - context: metric
-        statements:
-          - set(attributes["service.name"], attributes["service"]) where attributes["service"] != nil
+      # Service name will be preserved from Prometheus labels automatically
 
 exporters:
   # OTLP exporter for Jaeger/OpenTelemetry backend
@@ -97,7 +90,7 @@ service:
   pipelines:
     metrics:
       receivers: [prometheus]
-      processors: [batch, resource, transform]
+      processors: [batch, resource]
       exporters: [otlp, debug]
   
   extensions: []
