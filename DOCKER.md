@@ -6,7 +6,7 @@ This guide explains how to deploy the EDRS system using Docker and Docker Compos
 
 - Docker 20.10+ and Docker Compose 2.0+
 - At least 4GB of available RAM
-- Ports 8080-8090, 5433 (PostgreSQL), 9094 (Kafka), 9093, 16686, 4317-4318 available
+- Ports 8080-8090, 5433 (PostgreSQL), 9094 (Kafka broker), 9095 (Kafka controller), 16686, 4317-4318 available
 
 ## Quick Start
 

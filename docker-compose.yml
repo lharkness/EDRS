@@ -29,7 +29,7 @@ services:
     container_name: edrs-kafka
     ports:
       - "${KAFKA_PORT:-9094}:9092"
-      - "9093:9093"  # Controller listener
+      - "${KAFKA_CONTROLLER_PORT:-9095}:9093"  # Controller listener
     environment:
       # KRaft mode configuration
       KAFKA_PROCESS_ROLES: broker,controller

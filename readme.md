@@ -60,7 +60,7 @@ The system consists of five microservices:
 **For Docker deployment (Recommended):**
 - Docker 20.10+ and Docker Compose 2.0+
 - At least 4GB of available RAM
-- Ports 8080-8090, 5433 (PostgreSQL), 9094 (Kafka), 9093, 16686, 4317-4318 available
+- Ports 8080-8090, 5433 (PostgreSQL), 9094 (Kafka broker), 9095 (Kafka controller), 16686, 4317-4318 available
 
 **For local development:**
 - Java 17 or higher
