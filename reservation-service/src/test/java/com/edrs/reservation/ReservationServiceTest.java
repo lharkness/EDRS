@@ -2,11 +2,14 @@ package com.edrs.reservation;
 
 import com.edrs.reservation.service.ReservationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -21,22 +24,38 @@ import static org.mockito.Mockito.verify;
 
 @SpringBootTest(
     webEnvironment = WebEnvironment.NONE,
-    classes = {ReservationServiceApplication.class},
+    classes = {ReservationServiceTest.TestConfig.class, ReservationServiceApplication.class},
     properties = {
         "opentelemetry.enabled=false"
     }
 )
 @ComponentScan(
     basePackages = "com.edrs.reservation",
-    excludeFilters = @ComponentScan.Filter(
-        type = FilterType.ASSIGNABLE_TYPE,
-        classes = com.edrs.reservation.listener.ReservationEventListener.class
-    )
+    excludeFilters = {
+        @ComponentScan.Filter(
+            type = FilterType.ASSIGNABLE_TYPE,
+            classes = {
+                com.edrs.reservation.listener.ReservationEventListener.class,
+                com.edrs.reservation.config.KafkaConfig.class
+            }
+        )
+    }
 )
 @TestPropertySource(properties = {
     "opentelemetry.enabled=false"
 })
 public class ReservationServiceTest {
+    
+    @TestConfiguration
+    static class TestConfig {
+        @Bean
+        public ObjectMapper objectMapper() {
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.registerModule(new JavaTimeModule());
+            return mapper;
+        }
+    }
+    
     @MockBean
     private KafkaTemplate<String, String> kafkaTemplate;
 
