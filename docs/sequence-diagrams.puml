@@ -1,0 +1,155 @@
+@startuml Make Reservation - Success Flow
+title Make Reservation - Success Flow
+
+actor User
+participant "Reservation Service" as RS
+participant "Kafka" as K
+participant "Persistence Service" as PS
+database "PostgreSQL" as DB
+participant "Notification Service" as NS
+participant "Logging Service" as LS
+
+User -> RS: POST /api/reservations\n(userId, itemIds, date)
+activate RS
+RS -> RS: Generate correlationId
+RS -> K: Publish reservation-requested event
+deactivate RS
+
+K -> LS: reservation-requested event
+activate LS
+LS -> LS: Log event with correlationId
+deactivate LS
+
+K -> PS: reservation-requested event
+activate PS
+PS -> PS: Check idempotency
+PS -> PS: Log event to event_log table
+PS -> DB: Check inventory availability\nfor each item on date
+DB --> PS: Available quantities
+PS -> PS: Check if sufficient availability
+PS -> DB: Insert reservation
+PS -> DB: Insert reservation_items
+PS -> PS: Mark event as processed
+PS -> K: Publish reservation-created event
+note right: Event includes:\n- confirmationNumber\n- userId\n- itemIds\n- date
+deactivate PS
+
+K -> LS: reservation-created event
+activate LS
+LS -> LS: Log event with correlationId
+deactivate LS
+
+K -> NS: reservation-created event
+activate NS
+NS -> NS: Send confirmation email\n(mock implementation)
+deactivate NS
+
+K -> RS: reservation-created event
+activate RS
+RS -> RS: Update local cache\nwith reservation details
+deactivate RS
+
+RS --> User: Return correlationId
+
+@enduml
+
+@startuml Make Reservation - Failure Flow
+title Make Reservation - Failure Flow (Insufficient Inventory)
+
+actor User
+participant "Reservation Service" as RS
+participant "Kafka" as K
+participant "Persistence Service" as PS
+database "PostgreSQL" as DB
+participant "Logging Service" as LS
+
+User -> RS: POST /api/reservations\n(userId, itemIds, date)
+activate RS
+RS -> RS: Generate correlationId
+RS -> K: Publish reservation-requested event
+deactivate RS
+
+K -> LS: reservation-requested event
+activate LS
+LS -> LS: Log event with correlationId
+deactivate LS
+
+K -> PS: reservation-requested event
+activate PS
+PS -> PS: Check idempotency
+PS -> PS: Log event to event_log table
+PS -> DB: Check inventory availability\nfor each item on date
+DB --> PS: Available quantities
+PS -> PS: Check if sufficient availability
+PS -> PS: Insufficient availability detected
+PS -> K: Publish reservation-failed event
+note right: Event includes:\n- correlationId\n- reason (e.g., "Insufficient inventory")
+deactivate PS
+
+K -> LS: reservation-failed event
+activate LS
+LS -> LS: Log failure event\nwith correlationId\n(if listener implemented)
+deactivate LS
+
+note over User,LS: User receives correlationId but\nno confirmation number.\nFailure notification can be\nsent via separate mechanism.
+
+@enduml
+
+@startuml Cancel Reservation Flow
+title Cancel Reservation Flow
+
+actor User
+participant "Reservation Service" as RS
+participant "Kafka" as K
+participant "Persistence Service" as PS
+database "PostgreSQL" as DB
+participant "Notification Service" as NS
+participant "Logging Service" as LS
+
+User -> RS: DELETE /api/reservations/{confirmationNumber}
+activate RS
+RS -> RS: Generate correlationId
+RS -> K: Publish cancellation-requested event
+note right: Event includes:\n- correlationId\n- confirmationNumber
+deactivate RS
+
+K -> LS: cancellation-requested event
+activate LS
+LS -> LS: Log event with correlationId
+deactivate LS
+
+K -> PS: cancellation-requested event
+activate PS
+PS -> PS: Check idempotency
+PS -> PS: Log event to event_log table
+PS -> DB: Find reservation by confirmationNumber
+DB --> PS: Reservation details
+alt Reservation found
+    PS -> DB: Update reservation status to CANCELLED
+    PS -> PS: Mark event as processed
+    PS -> K: Publish cancellation-successful event
+    note right: Event includes:\n- correlationId\n- confirmationNumber\n- userId
+else Reservation not found
+    PS -> PS: Record error in span
+    note right: Exception thrown,\nno event published
+end
+deactivate PS
+
+K -> LS: cancellation-successful event
+activate LS
+LS -> LS: Log event with correlationId
+deactivate LS
+
+K -> NS: cancellation-successful event
+activate NS
+NS -> NS: Send cancellation email\n(mock implementation)
+deactivate NS
+
+K -> RS: cancellation-successful event
+activate RS
+RS -> RS: Update local cache\nset status to CANCELLED
+deactivate RS
+
+RS --> User: 200 OK
+
+@enduml

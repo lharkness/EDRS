@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: logging-service
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: logging-service-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: 8083
+
+logging:
+  level:
+    com.edrs: DEBUG
+    org.springframework.kafka: INFO

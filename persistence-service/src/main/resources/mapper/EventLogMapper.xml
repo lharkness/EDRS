@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.edrs.persistence.mapper.EventLogMapper">
+
+    <resultMap id="EventLogResultMap" type="com.edrs.persistence.entity.EventLog">
+        <id property="id" column="id"/>
+        <result property="eventId" column="event_id" typeHandler="org.apache.ibatis.type.UUIDTypeHandler"/>
+        <result property="correlationId" column="correlation_id" typeHandler="org.apache.ibatis.type.UUIDTypeHandler"/>
+        <result property="eventType" column="event_type"/>
+        <result property="eventVersion" column="event_version"/>
+        <result property="source" column="source"/>
+        <result property="payload" column="payload"/>
+        <result property="processed" column="processed"/>
+        <result property="timestamp" column="timestamp"/>
+        <result property="processedAt" column="processed_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.edrs.persistence.entity.EventLog">
+        INSERT INTO event_log (event_id, correlation_id, event_type, event_version, source, payload, processed, timestamp)
+        VALUES (#{eventId,typeHandler=org.apache.ibatis.type.UUIDTypeHandler},
+                #{correlationId,typeHandler=org.apache.ibatis.type.UUIDTypeHandler},
+                #{eventType}, #{eventVersion}, #{source}, #{payload}, 
+                COALESCE(#{processed}, false),
+                COALESCE(#{timestamp}, CURRENT_TIMESTAMP))
+    </insert>
+
+    <select id="findByEventId" parameterType="java.util.UUID" resultMap="EventLogResultMap">
+        SELECT id, event_id, correlation_id, event_type, event_version, source, payload, processed, timestamp, processed_at
+        FROM event_log
+        WHERE event_id = #{eventId,typeHandler=org.apache.ibatis.type.UUIDTypeHandler}
+    </select>
+
+    <select id="existsByEventId" parameterType="java.util.UUID" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM event_log WHERE event_id = #{eventId,typeHandler=org.apache.ibatis.type.UUIDTypeHandler})
+    </select>
+
+    <update id="updateProcessed">
+        UPDATE event_log
+        SET processed = true,
+            processed_at = COALESCE(#{processedAt}, CURRENT_TIMESTAMP)
+        WHERE event_id = #{eventId,typeHandler=org.apache.ibatis.type.UUIDTypeHandler}
+    </update>
+
+</mapper>

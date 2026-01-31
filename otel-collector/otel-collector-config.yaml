@@ -1,0 +1,106 @@
+receivers:
+  # Prometheus receiver to scrape metrics from Spring Boot Actuator
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'persistence-service'
+          scrape_interval: 10s
+          metrics_path: '/actuator/prometheus'
+          static_configs:
+            # Use host.docker.internal for Docker Desktop (Windows/Mac)
+            # Use localhost or 172.17.0.1 for Linux
+            # Or use service name if services are in same Docker network
+            # Note: Environment variable substitution may require collector-contrib image
+            - targets: ['host.docker.internal:8084']
+              labels:
+                service: 'persistence-service'
+                environment: 'development'
+        
+        - job_name: 'reservation-service'
+          scrape_interval: 10s
+          metrics_path: '/actuator/prometheus'
+          static_configs:
+            - targets: ['host.docker.internal:8080']
+              labels:
+                service: 'reservation-service'
+                environment: 'development'
+        
+        - job_name: 'inventory-service'
+          scrape_interval: 10s
+          metrics_path: '/actuator/prometheus'
+          static_configs:
+            - targets: ['host.docker.internal:8081']
+              labels:
+                service: 'inventory-service'
+                environment: 'development'
+        
+        - job_name: 'notification-service'
+          scrape_interval: 10s
+          metrics_path: '/actuator/prometheus'
+          static_configs:
+            - targets: ['host.docker.internal:8082']
+              labels:
+                service: 'notification-service'
+                environment: 'development'
+        
+        - job_name: 'logging-service'
+          scrape_interval: 10s
+          metrics_path: '/actuator/prometheus'
+          static_configs:
+            - targets: ['host.docker.internal:8083']
+              labels:
+                service: 'logging-service'
+                environment: 'development'
+
+processors:
+  # Batch processor for better performance
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+  
+  # Resource processor to add service name and other attributes
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: ${DEPLOYMENT_ENVIRONMENT:development}
+        action: upsert
+      - key: service.namespace
+        value: ${SERVICE_NAMESPACE:edrs}
+        action: upsert
+
+  # Transform processor to convert Prometheus metrics to OTLP format
+  transform:
+    metric_statements:
+      # Add service name from job label
+      - context: metric
+        statements:
+          - set(attributes["service.name"], attributes["service"]) where attributes["service"] != nil
+          - delete_key(attributes, "service") where attributes["service"] != nil
+
+exporters:
+  # OTLP exporter for Jaeger/OpenTelemetry backend
+  otlp:
+    endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:localhost:4317}
+    tls:
+      insecure: ${OTEL_EXPORTER_OTLP_INSECURE:true}
+    headers:
+      x-api-key: ${OTEL_EXPORTER_OTLP_HEADERS:}
+  
+  # Optional: Also export to Prometheus for compatibility
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    const_labels:
+      collector: "opentelemetry"
+  
+  # Optional: Debug exporter for logging
+  logging:
+    loglevel: ${OTEL_LOG_LEVEL:info}
+
+service:
+  pipelines:
+    metrics:
+      receivers: [prometheus]
+      processors: [batch, resource, transform]
+      exporters: [otlp, logging]
+  
+  extensions: []

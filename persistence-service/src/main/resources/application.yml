@@ -1,0 +1,85 @@
+spring:
+  application:
+    name: persistence-service
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/edrs}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      # Connection pool settings
+      minimum-idle: ${DATABASE_POOL_MIN_IDLE:5}
+      maximum-pool-size: ${DATABASE_POOL_MAX_SIZE:20}
+      connection-timeout: ${DATABASE_POOL_CONNECTION_TIMEOUT:30000}
+      idle-timeout: ${DATABASE_POOL_IDLE_TIMEOUT:600000}
+      max-lifetime: ${DATABASE_POOL_MAX_LIFETIME:1800000}
+      leak-detection-threshold: ${DATABASE_POOL_LEAK_DETECTION:60000}
+      # Connection validation
+      connection-test-query: SELECT 1
+      validation-timeout: 5000
+      # Performance settings
+      auto-commit: false
+      # Connection pool name for monitoring
+      pool-name: EDRS-Persistence-Pool
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema.sql
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: persistence-service-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      isolation-level: read_committed
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      retries: 3
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: 8084
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.edrs.persistence.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    default-executor-type: reuse
+
+# OpenTelemetry Configuration
+opentelemetry:
+  jaeger:
+    endpoint: ${JAEGER_ENDPOINT:http://localhost:14250}
+  service:
+    name: ${OTEL_SERVICE_NAME:persistence-service}
+
+# Actuator endpoints for metrics
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    # HikariCP metrics are automatically included via Micrometer
+    # To export to OpenTelemetry, use OpenTelemetry Collector to scrape /actuator/prometheus
+    # or use the OpenTelemetry Java agent (see docs/HIKARICP_METRICS.md)
+
+logging:
+  level:
+    com.edrs: DEBUG
+    org.springframework.kafka: INFO
+    org.apache.ibatis: INFO
+    io.opentelemetry: INFO
