@@ -1,15 +1,34 @@
 # EDRS Documentation
 
-## Sequence Diagrams
+This directory contains additional documentation for the EDRS system.
 
-This directory contains PlantUML sequence diagrams that illustrate the event flows in the EDRS system.
+## Documentation Files
 
-### Files
+### Sequence Diagrams
 
 - `sequence-diagrams.puml` - Contains three sequence diagrams:
   1. **Make Reservation - Success Flow**: Shows the complete flow when a reservation is successfully created
   2. **Make Reservation - Failure Flow**: Shows the flow when a reservation fails due to insufficient inventory
   3. **Cancel Reservation Flow**: Shows the complete flow when a reservation is cancelled
+
+### Bulk Import
+
+- `BULK_IMPORT.md` - Complete guide for bulk importing inventory via CSV files
+  - CSV format specifications
+  - API usage examples
+  - Error handling
+  - Best practices
+
+### Metrics & Observability
+
+- `HIKARICP_METRICS.md` - Guide for HikariCP metrics with OpenTelemetry
+  - Available metrics
+  - Integration options
+  - Viewing metrics in Jaeger/Prometheus
+
+### Sample Files
+
+- `sample-inventory-bulk.csv` - Example CSV file for bulk inventory import
 
 ### Viewing the Diagrams
 

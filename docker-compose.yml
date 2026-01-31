@@ -1,0 +1,257 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: edrs-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-edrs}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./persistence-service/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - edrs-network
+    restart: unless-stopped
+
+  # Kafka with KRaft (no Zookeeper required)
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: edrs-kafka
+    ports:
+      - "${KAFKA_PORT:-9092}:9092"
+      - "9093:9093"  # Controller listener
+    environment:
+      # KRaft mode configuration
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # Topic configuration
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      # Log configuration
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - edrs-network
+    restart: unless-stopped
+
+  # Kafka UI (optional - for managing topics)
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: edrs-kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8089:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      # No Zookeeper needed with KRaft
+    networks:
+      - edrs-network
+    restart: unless-stopped
+
+  # Reservation Service
+  reservation-service:
+    build:
+      context: .
+      dockerfile: reservation-service/Dockerfile
+    container_name: edrs-reservation-service
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: reservation-service
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SERVER_PORT: 8080
+      JAEGER_ENDPOINT: http://jaeger:14250
+    ports:
+      - "8080:8080"
+    networks:
+      - edrs-network
+    restart: unless-stopped
+
+  # Inventory Service
+  inventory-service:
+    build:
+      context: .
+      dockerfile: inventory-service/Dockerfile
+    container_name: edrs-inventory-service
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: inventory-service
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SERVER_PORT: 8081
+    ports:
+      - "8081:8081"
+    networks:
+      - edrs-network
+    restart: unless-stopped
+
+  # Notification Service
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    container_name: edrs-notification-service
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: notification-service
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SERVER_PORT: 8082
+    ports:
+      - "8082:8082"
+    networks:
+      - edrs-network
+    restart: unless-stopped
+
+  # Logging Service
+  logging-service:
+    build:
+      context: .
+      dockerfile: logging-service/Dockerfile
+    container_name: edrs-logging-service
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: logging-service
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SERVER_PORT: 8083
+    ports:
+      - "8083:8083"
+    networks:
+      - edrs-network
+    restart: unless-stopped
+
+  # Persistence Service
+  persistence-service:
+    build:
+      context: .
+      dockerfile: persistence-service/Dockerfile
+    container_name: edrs-persistence-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: persistence-service
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      DATABASE_URL: jdbc:postgresql://postgres:5432/edrs
+      DATABASE_USERNAME: ${POSTGRES_USER:-postgres}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      SERVER_PORT: 8084
+      JAEGER_ENDPOINT: http://jaeger:14250
+    ports:
+      - "8084:8084"
+    networks:
+      - edrs-network
+    restart: unless-stopped
+
+  # Jaeger for distributed tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: edrs-jaeger
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "14250:14250"  # Jaeger gRPC
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    networks:
+      - edrs-network
+    restart: unless-stopped
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: edrs-otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8889:8889"   # Prometheus metrics endpoint
+      - "8888:8888"   # Prometheus exporter metrics
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4317
+      OTEL_EXPORTER_OTLP_INSECURE: "true"
+      DEPLOYMENT_ENVIRONMENT: ${DEPLOYMENT_ENVIRONMENT:-development}
+      SERVICE_NAMESPACE: ${SERVICE_NAMESPACE:-edrs}
+      OTEL_LOG_LEVEL: ${OTEL_LOG_LEVEL:-info}
+    depends_on:
+      - jaeger
+    networks:
+      - edrs-network
+    restart: unless-stopped
+
+  # Centralized Swagger UI (aggregates all service APIs)
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: edrs-swagger-ui
+    ports:
+      - "8090:8080"
+    environment:
+      # Use URL list mode to aggregate multiple APIs
+      URLS_PRIMARY_NAME: EDRS APIs
+      URLS: |
+        [
+          {
+            "url": "http://reservation-service:8080/api-docs",
+            "name": "Reservation Service"
+          },
+          {
+            "url": "http://inventory-service:8081/api-docs",
+            "name": "Inventory Service"
+          }
+        ]
+    depends_on:
+      - reservation-service
+      - inventory-service
+    networks:
+      - edrs-network
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+    driver: local
+  kafka-data:
+    driver: local
+
+networks:
+  edrs-network:
+    driver: bridge

@@ -2,7 +2,16 @@
 
 ## Overview
 
-EDRS is a microservices-based reservation system built with Spring Boot, Kafka, and PostgreSQL. The system is designed to handle reservations for inventory items through an event-driven architecture.
+EDRS is a microservices-based reservation system built with Spring Boot, Kafka, and PostgreSQL. The system is designed to handle reservations for inventory items through an event-driven architecture using the choreography pattern.
+
+**Key Features:**
+- ✅ Event-driven microservices architecture
+- ✅ Docker Compose deployment (one command to start everything)
+- ✅ Bulk CSV inventory import
+- ✅ Distributed tracing with OpenTelemetry and Jaeger
+- ✅ HikariCP connection pooling with metrics
+- ✅ Event sourcing and idempotency
+- ✅ Centralized Swagger UI for all APIs
 
 ## Architecture
 
@@ -15,6 +24,7 @@ The system consists of five microservices:
 
 2. **Inventory Service** (Port 8081)
    - REST API for managing inventory items
+   - **Bulk CSV import** for inventory (POST `/api/inventory/receive/bulk`)
    - Swagger UI available at `/swagger-ui.html`
    - Publishes inventory receive events to Kafka
 
@@ -38,16 +48,51 @@ The system consists of five microservices:
 - **Spring Kafka 3.1.1**
 - **Apache Kafka 4.0.0** (Client library)
 - **MyBatis 3.0.3** (Database persistence)
+- **HikariCP** (Connection pooling)
 - **PostgreSQL 42.7.1**
 - **Maven** (Multi-module project)
 - **Swagger/OpenAPI** for API documentation
+- **OpenTelemetry 1.32.0** (Distributed tracing and metrics)
+- **Docker & Docker Compose** (Containerization)
 
 ## Prerequisites
 
+**For Docker deployment (Recommended):**
+- Docker 20.10+ and Docker Compose 2.0+
+- At least 4GB of available RAM
+- Ports 8080-8090, 5432, 9092, 9093, 16686, 4317-4318 available
+
+**For local development:**
 - Java 17 or higher
 - Maven 3.6+
 - PostgreSQL (for production) or H2 (for testing)
 - Kafka (for production) or embedded Kafka (for testing)
+
+## Quick Start with Docker
+
+The easiest way to get started is using Docker Compose:
+
+```bash
+# Build and start all services (including Kafka and PostgreSQL)
+docker-compose up -d --build
+
+# View logs
+docker-compose logs -f
+
+# Check service status
+docker-compose ps
+```
+
+This will start:
+- All 5 microservices
+- PostgreSQL database
+- Kafka with KRaft (no Zookeeper required)
+- Jaeger for distributed tracing
+- OpenTelemetry Collector
+- Kafka UI for topic management
+- **Centralized Swagger UI** (aggregates all service APIs)
+
+See [DOCKER.md](DOCKER.md) for detailed Docker deployment instructions.
 
 ## Local Development Setup
 
@@ -119,7 +164,10 @@ mvn spring-boot:run -pl persistence-service
 - `GET /api/inventory` - List inventory items (supports filtering)
 - `GET /api/inventory/{id}` - Get inventory item details
 - `POST /api/inventory/receive` - Receive inventory
+- `POST /api/inventory/receive/bulk` - **Bulk import inventory from CSV file**
 - `GET /swagger-ui.html` - Swagger UI
+
+See [BULK_IMPORT.md](docs/BULK_IMPORT.md) for CSV format and usage details.
 
 ## Event Flow
 
@@ -144,6 +192,7 @@ mvn spring-boot:run -pl persistence-service
 
 3. **Inventory Receive Flow:**
    - Admin receives inventory via Inventory Service API
+   - **Bulk import**: Upload CSV file via `/api/inventory/receive/bulk` endpoint
    - Inventory Service publishes `inventory-received` event
    - Persistence Service updates inventory quantities
    - Logging Service logs the event
@@ -196,7 +245,7 @@ The system uses the following Kafka topics:
 
 ## Database Schema
 
-The Persistence Service uses MyBatis for database interactions. The complete SQL schema is available in `persistence-service/src/main/resources/db/schema.sql`.
+The Persistence Service uses **MyBatis** for database interactions with **HikariCP** connection pooling. The complete SQL schema is available in `persistence-service/src/main/resources/db/schema.sql`.
 
 **Business Tables:**
 - `reservations` - Stores reservation information
@@ -208,9 +257,10 @@ The Persistence Service uses MyBatis for database interactions. The complete SQL
 - `processed_events` - Idempotency table tracking unique event IDs to prevent duplicate processing
 
 **Schema Management:**
-- The schema SQL file (`schema.sql`) contains all CREATE TABLE statements, indexes, and triggers
+- The schema SQL file (`schema.sql`) contains all CREATE TABLE statements, indexes, and constraints
 - Tables are automatically created on startup via Spring Boot's `spring.sql.init.mode=always`
 - For production, you can run the schema SQL manually or use a migration tool like Flyway/Liquibase
+- Connection pooling is configured via HikariCP (see [HIKARICP_METRICS.md](docs/HIKARICP_METRICS.md))
 
 ## Correlation IDs
 
@@ -220,7 +270,8 @@ All events include correlation IDs for tracing requests across services. The Log
 
 ### Prerequisites
 
-- **Kafka Cluster** (Apache Kafka 4.0.0 or compatible)
+- **Kafka Cluster** (Apache Kafka 4.0.0+ with KRaft mode recommended)
+  - KRaft mode eliminates Zookeeper dependency
   - At least 3 brokers recommended for production
   - Replication factor of 3 for topics
   - Minimum in-sync replicas of 2
@@ -268,7 +319,7 @@ GRANT ALL PRIVILEGES ON DATABASE edrs TO edrs_user;
 GRANT ALL ON SCHEMA public TO edrs_user;
 ```
 
-The persistence service will automatically create all required tables on first startup using Hibernate's `ddl-auto: update`.
+The persistence service will automatically create all required tables on first startup using the SQL schema file (`persistence-service/src/main/resources/db/schema.sql`) via Spring Boot's `spring.sql.init.mode=always`.
 
 ### 3. Create Kafka Topics
 
@@ -548,9 +599,10 @@ docker run -d --name jaeger \
 - Email service integration (currently mocked)
 - Reservation conflict detection
 - Metrics and monitoring dashboards
-- Docker Compose setup for local development
 - Kubernetes deployment manifests
 - CI/CD pipeline configuration
+- Transactional outbox pattern for guaranteed event delivery
+- Dead letter queue for failed events
 
 ## Project Structure
 
@@ -558,11 +610,27 @@ docker run -d --name jaeger \
 edrs-parent/
 ├── common/                    # Shared DTOs and events
 ├── reservation-service/       # Reservation API service
-├── inventory-service/         # Inventory API service
+├── inventory-service/         # Inventory API service (includes CSV bulk import)
 ├── notification-service/      # Notification service
 ├── logging-service/           # Logging service
-└── persistence-service/       # Persistence service
+├── persistence-service/       # Persistence service (MyBatis, HikariCP)
+├── otel-collector/           # OpenTelemetry Collector configuration
+├── scripts/                  # Utility scripts (Kafka topic initialization)
+└── docs/                     # Additional documentation
+    ├── BULK_IMPORT.md        # CSV bulk import guide
+    ├── HIKARICP_METRICS.md   # HikariCP metrics documentation
+    └── sequence-diagrams.puml # Event flow diagrams
 ```
+
+## Documentation
+
+- **[QUICKSTART.md](QUICKSTART.md)** - Get started in one command
+- **[DOCKER.md](DOCKER.md)** - Complete Docker deployment guide
+- **[docs/BULK_IMPORT.md](docs/BULK_IMPORT.md)** - CSV bulk inventory import guide
+- **[docs/HIKARICP_METRICS.md](docs/HIKARICP_METRICS.md)** - HikariCP metrics with OpenTelemetry
+- **[docs/sequence-diagrams.puml](docs/sequence-diagrams.puml)** - Event flow sequence diagrams
+- **[otel-collector/README.md](otel-collector/README.md)** - OpenTelemetry Collector setup
+- **[persistence-service/CHOREOGRAPHY_PATTERN.md](persistence-service/CHOREOGRAPHY_PATTERN.md)** - Choreography pattern details
 
 ## License
 

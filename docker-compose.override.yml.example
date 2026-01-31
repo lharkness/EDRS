@@ -1,0 +1,22 @@
+# Example override file for local development
+# Copy this to docker-compose.override.yml and customize as needed
+
+version: '3.8'
+
+services:
+  # Override environment variables for local development
+  reservation-service:
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: localhost:9092  # Use host Kafka if running locally
+      JAEGER_ENDPOINT: http://localhost:14250
+
+  persistence-service:
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+      DATABASE_URL: jdbc:postgresql://localhost:5432/edrs
+      JAEGER_ENDPOINT: http://localhost:14250
+
+  # Disable services you don't need
+  # kafka-ui:
+  #   profiles:
+  #     - disabled

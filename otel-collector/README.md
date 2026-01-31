@@ -69,13 +69,16 @@ The OpenTelemetry Collector:
 ### Service Endpoints
 
 The collector is configured to scrape metrics from:
-- **Persistence Service**: `host.docker.internal:8084/actuator/prometheus` (default)
-- **Reservation Service**: `host.docker.internal:8080/actuator/prometheus` (default)
-- **Inventory Service**: `host.docker.internal:8081/actuator/prometheus` (default)
-- **Notification Service**: `host.docker.internal:8082/actuator/prometheus` (default)
-- **Logging Service**: `host.docker.internal:8083/actuator/prometheus` (default)
+- **Persistence Service**: `persistence-service:8084/actuator/prometheus` (when using docker-compose)
+- **Reservation Service**: `reservation-service:8080/actuator/prometheus` (when using docker-compose)
+- **Inventory Service**: `inventory-service:8081/actuator/prometheus` (when using docker-compose)
+- **Notification Service**: `notification-service:8082/actuator/prometheus` (when using docker-compose)
+- **Logging Service**: `logging-service:8083/actuator/prometheus` (when using docker-compose)
 
-**Note**: The default `host.docker.internal` works on Docker Desktop (Windows/Mac). For Linux or custom setups, you can override these via environment variables in `docker-compose.yml`.
+**Note**: 
+- When running with the main `docker-compose.yml`, the collector uses Docker service names (as shown above)
+- When running the collector standalone (outside docker-compose), use `host.docker.internal:8084` (Windows/Mac) or `172.17.0.1:8084` (Linux)
+- The configuration in `otel-collector-config.yaml` is optimized for the main docker-compose setup
 
 ### Environment Variables
 
