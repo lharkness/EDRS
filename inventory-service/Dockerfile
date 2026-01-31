@@ -2,13 +2,21 @@
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
 
-# Copy parent POM and common module
+# Copy parent POM
 COPY pom.xml .
+
+# Copy all module POMs (Maven needs them to resolve parent structure)
 COPY common/pom.xml ./common/
+COPY reservation-service/pom.xml ./reservation-service/
+COPY inventory-service/pom.xml ./inventory-service/
+COPY notification-service/pom.xml ./notification-service/
+COPY logging-service/pom.xml ./logging-service/
+COPY persistence-service/pom.xml ./persistence-service/
+
+# Copy common module source (needed as dependency)
 COPY common/src ./common/src
 
-# Copy service files
-COPY inventory-service/pom.xml ./inventory-service/
+# Copy service source
 COPY inventory-service/src ./inventory-service/src
 
 # Build
