@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.TestPropertySource;
 
@@ -19,12 +21,20 @@ import static org.mockito.Mockito.verify;
 
 @SpringBootTest(
     webEnvironment = WebEnvironment.NONE,
-    classes = ReservationServiceApplication.class
+    classes = {ReservationServiceApplication.class},
+    properties = {
+        "opentelemetry.enabled=false"
+    }
+)
+@ComponentScan(
+    basePackages = "com.edrs.reservation",
+    excludeFilters = @ComponentScan.Filter(
+        type = FilterType.ASSIGNABLE_TYPE,
+        classes = com.edrs.reservation.listener.ReservationEventListener.class
+    )
 )
 @TestPropertySource(properties = {
-    "opentelemetry.enabled=false",
-    "spring.kafka.bootstrap-servers=localhost:9092",
-    "spring.kafka.consumer.auto-offset-reset=earliest"
+    "opentelemetry.enabled=false"
 })
 public class ReservationServiceTest {
     @MockBean

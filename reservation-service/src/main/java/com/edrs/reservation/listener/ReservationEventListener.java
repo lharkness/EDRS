@@ -12,6 +12,9 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+    name = "spring.kafka.bootstrap-servers"
+)
 public class ReservationEventListener {
     private static final Logger logger = LoggerFactory.getLogger(ReservationEventListener.class);
     private static final String RESERVATION_CREATED_TOPIC = "reservation-created";
