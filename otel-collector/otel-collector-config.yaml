@@ -62,10 +62,10 @@ processors:
   resource:
     attributes:
       - key: deployment.environment
-        value: ${DEPLOYMENT_ENVIRONMENT:development}
+        value: development
         action: upsert
       - key: service.namespace
-        value: ${SERVICE_NAMESPACE:edrs}
+        value: edrs
         action: upsert
 
   # Transform processor to convert Prometheus metrics to OTLP format
@@ -80,11 +80,9 @@ processors:
 exporters:
   # OTLP exporter for Jaeger/OpenTelemetry backend
   otlp:
-    endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:localhost:4317}
+    endpoint: jaeger:4317
     tls:
-      insecure: ${OTEL_EXPORTER_OTLP_INSECURE:true}
-    headers:
-      x-api-key: ${OTEL_EXPORTER_OTLP_HEADERS:}
+      insecure: true
   
   # Optional: Also export to Prometheus for compatibility
   prometheus:
@@ -94,7 +92,7 @@ exporters:
   
   # Optional: Debug exporter for logging
   logging:
-    loglevel: ${OTEL_LOG_LEVEL:info}
+    loglevel: info
 
 service:
   pipelines:
