@@ -9,14 +9,19 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
 
 @Configuration
+@ConditionalOnProperty(name = "opentelemetry.enabled", havingValue = "true", matchIfMissing = true)
 public class OpenTelemetryConfig {
+    private static final Logger logger = LoggerFactory.getLogger(OpenTelemetryConfig.class);
 
     @Value("${opentelemetry.jaeger.endpoint:http://localhost:14250}")
     private String jaegerEndpoint;
@@ -26,31 +31,36 @@ public class OpenTelemetryConfig {
 
     @Bean
     public OpenTelemetry openTelemetry() {
-        Resource resource = Resource.getDefault()
-                .merge(Resource.create(io.opentelemetry.api.common.Attributes.of(
-                        io.opentelemetry.api.common.AttributeKey.stringKey("service.name"), serviceName,
-                        io.opentelemetry.api.common.AttributeKey.stringKey("service.version"), "1.0.0"
-                )));
+        try {
+            Resource resource = Resource.getDefault()
+                    .merge(Resource.create(io.opentelemetry.api.common.Attributes.of(
+                            io.opentelemetry.api.common.AttributeKey.stringKey("service.name"), serviceName,
+                            io.opentelemetry.api.common.AttributeKey.stringKey("service.version"), "1.0.0"
+                    )));
 
-        JaegerGrpcSpanExporter jaegerExporter = JaegerGrpcSpanExporter.builder()
-                .setEndpoint(jaegerEndpoint)
-                .build();
+            JaegerGrpcSpanExporter jaegerExporter = JaegerGrpcSpanExporter.builder()
+                    .setEndpoint(jaegerEndpoint)
+                    .build();
 
-        SdkTracerProvider tracerProvider = SdkTracerProvider.builder()
-                .setResource(resource)
-                .addSpanProcessor(BatchSpanProcessor.builder(jaegerExporter)
-                        .setScheduleDelay(Duration.ofMillis(100))
-                        .build())
-                .build();
+            SdkTracerProvider tracerProvider = SdkTracerProvider.builder()
+                    .setResource(resource)
+                    .addSpanProcessor(BatchSpanProcessor.builder(jaegerExporter)
+                            .setScheduleDelay(Duration.ofMillis(100))
+                            .build())
+                    .build();
 
-        SdkMeterProvider meterProvider = SdkMeterProvider.builder()
-                .setResource(resource)
-                .build();
+            SdkMeterProvider meterProvider = SdkMeterProvider.builder()
+                    .setResource(resource)
+                    .build();
 
-        return OpenTelemetrySdk.builder()
-                .setTracerProvider(tracerProvider)
-                .setMeterProvider(meterProvider)
-                .buildAndRegisterGlobal();
+            return OpenTelemetrySdk.builder()
+                    .setTracerProvider(tracerProvider)
+                    .setMeterProvider(meterProvider)
+                    .buildAndRegisterGlobal();
+        } catch (Exception e) {
+            logger.warn("Failed to initialize OpenTelemetry, using no-op implementation: {}", e.getMessage());
+            return OpenTelemetry.noop();
+        }
     }
 
     @Bean
