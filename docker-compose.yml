@@ -50,14 +50,16 @@ services:
       # Log configuration
       KAFKA_LOG_DIRS: /var/lib/kafka/data
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      # Additional KRaft settings for faster startup
+      KAFKA_METADATA_LOG_DIR: /var/lib/kafka/data/metadata
     volumes:
       - kafka-data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      test: ["CMD-SHELL", "timeout 5 kafka-broker-api-versions --bootstrap-server localhost:29092 >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 180s
     networks:
       - edrs-network
     restart: unless-stopped
@@ -86,7 +88,7 @@ services:
     container_name: edrs-reservation-service
     depends_on:
       kafka:
-        condition: service_healthy
+        condition: service_started
     environment:
       SPRING_APPLICATION_NAME: reservation-service
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
@@ -106,7 +108,7 @@ services:
     container_name: edrs-inventory-service
     depends_on:
       kafka:
-        condition: service_healthy
+        condition: service_started
     environment:
       SPRING_APPLICATION_NAME: inventory-service
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
@@ -125,7 +127,7 @@ services:
     container_name: edrs-notification-service
     depends_on:
       kafka:
-        condition: service_healthy
+        condition: service_started
     environment:
       SPRING_APPLICATION_NAME: notification-service
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
@@ -144,7 +146,7 @@ services:
     container_name: edrs-logging-service
     depends_on:
       kafka:
-        condition: service_healthy
+        condition: service_started
     environment:
       SPRING_APPLICATION_NAME: logging-service
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
@@ -165,7 +167,7 @@ services:
       postgres:
         condition: service_healthy
       kafka:
-        condition: service_healthy
+        condition: service_started
     environment:
       SPRING_APPLICATION_NAME: persistence-service
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
