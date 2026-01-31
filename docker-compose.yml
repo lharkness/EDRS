@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   postgres:
@@ -69,7 +67,8 @@ services:
     image: provectuslabs/kafka-ui:latest
     container_name: edrs-kafka-ui
     depends_on:
-      - kafka
+      kafka:
+        condition: service_started
     ports:
       - "8089:8080"
     environment:

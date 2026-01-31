@@ -156,6 +156,34 @@ docker-compose logs --tail=100 reservation-service
 
 ## Troubleshooting
 
+### Docker Permission Denied
+
+If you see `permission denied while trying to connect to the Docker daemon socket`:
+
+**On Linux/WSL2:**
+```bash
+# Add your user to the docker group
+sudo usermod -aG docker $USER
+
+# Log out and log back in, or run:
+newgrp docker
+
+# Verify access
+docker ps
+```
+
+**Alternative (if you can't modify groups):**
+```bash
+# Use sudo for docker commands
+sudo docker compose up -d --build
+sudo docker compose logs -f
+```
+
+**On Windows with Docker Desktop:**
+- Ensure Docker Desktop is running
+- If using WSL2, ensure Docker Desktop is configured to use the WSL2 backend
+- Restart Docker Desktop if needed
+
 ### Services Won't Start
 
 1. **Check port conflicts**:
