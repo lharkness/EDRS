@@ -49,6 +49,7 @@ server:
 mybatis:
   mapper-locations: classpath:mapper/*.xml
   type-aliases-package: com.edrs.persistence.entity
+  type-handlers-package: com.edrs.persistence.config
   configuration:
     map-underscore-to-camel-case: true
     default-executor-type: reuse

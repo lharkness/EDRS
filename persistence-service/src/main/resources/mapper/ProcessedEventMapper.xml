@@ -4,8 +4,8 @@
 
     <resultMap id="ProcessedEventResultMap" type="com.edrs.persistence.entity.ProcessedEvent">
         <id property="id" column="id"/>
-        <result property="eventId" column="event_id"/>
-        <result property="correlationId" column="correlation_id"/>
+        <result property="eventId" column="event_id" typeHandler="com.edrs.persistence.config.UUIDTypeHandler"/>
+        <result property="correlationId" column="correlation_id" typeHandler="com.edrs.persistence.config.UUIDTypeHandler"/>
         <result property="eventType" column="event_type"/>
         <result property="processedAt" column="processed_at"/>
         <result property="handlerService" column="handler_service"/>
@@ -13,7 +13,9 @@
 
     <insert id="insert" parameterType="com.edrs.persistence.entity.ProcessedEvent">
         INSERT INTO processed_events (event_id, correlation_id, event_type, processed_at, handler_service)
-        VALUES (#{eventId}, #{correlationId}, #{eventType},
+        VALUES (#{eventId,typeHandler=com.edrs.persistence.config.UUIDTypeHandler}, 
+                #{correlationId,typeHandler=com.edrs.persistence.config.UUIDTypeHandler}, 
+                #{eventType},
                 COALESCE(#{processedAt}, CURRENT_TIMESTAMP),
                 #{handlerService})
     </insert>
@@ -21,11 +23,11 @@
     <select id="findByEventId" parameterType="java.util.UUID" resultMap="ProcessedEventResultMap">
         SELECT id, event_id, correlation_id, event_type, processed_at, handler_service
         FROM processed_events
-        WHERE event_id = #{eventId}
+        WHERE event_id = #{eventId,typeHandler=com.edrs.persistence.config.UUIDTypeHandler}
     </select>
 
     <select id="existsByEventId" parameterType="java.util.UUID" resultType="boolean">
-        SELECT EXISTS(SELECT 1 FROM processed_events WHERE event_id = #{eventId})
+        SELECT EXISTS(SELECT 1 FROM processed_events WHERE event_id = #{eventId,typeHandler=com.edrs.persistence.config.UUIDTypeHandler})
     </select>
 
 </mapper>
