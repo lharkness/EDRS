@@ -3,7 +3,6 @@ package com.edrs.reservation;
 import com.edrs.reservation.service.ReservationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -23,18 +22,13 @@ public class ReservationServiceTest {
     @Mock
     private KafkaTemplate<String, String> kafkaTemplate;
 
-    private ObjectMapper objectMapper;
-    private ReservationService reservationService;
-
-    @BeforeEach
-    public void setUp() {
-        objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        reservationService = new ReservationService(kafkaTemplate, objectMapper);
-    }
-
     @Test
     public void testMakeReservation() {
+        // Initialize dependencies directly in test to avoid @BeforeEach issues
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        ReservationService reservationService = new ReservationService(kafkaTemplate, objectMapper);
+        
         String userId = "user123";
         var inventoryItemIds = Arrays.asList("item1", "item2");
         LocalDateTime reservationDate = LocalDateTime.now().plusDays(1);
