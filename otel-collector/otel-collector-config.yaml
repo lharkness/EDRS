@@ -71,11 +71,10 @@ processors:
   # Transform processor to convert Prometheus metrics to OTLP format
   transform:
     metric_statements:
-      # Add service name from job label
+      # Add service name from job label (keep original "service" attribute as well)
       - context: metric
         statements:
           - set(attributes["service.name"], attributes["service"]) where attributes["service"] != nil
-          - delete_key(attributes, "service") where attributes["service"] != nil
 
 exporters:
   # OTLP exporter for Jaeger/OpenTelemetry backend
