@@ -222,6 +222,51 @@ If services can't connect to Kafka:
    docker exec -it edrs-kafka kafka-broker-api-versions --bootstrap-server localhost:29092
    ```
 
+### Kafka KRaft Metadata Format Error
+
+If you see `No meta.properties found in /var/lib/kafka/data/metadata`:
+
+This means the Kafka metadata directory needs to be formatted. **Clear the Kafka volume**:
+
+```bash
+# Stop all services
+docker-compose down
+
+# Remove the Kafka volume
+docker volume rm edrs_kafka-data
+
+# Start again (Kafka will format on first run)
+docker-compose up -d
+```
+
+**Note**: This will delete all Kafka data. For production, format the directory manually using `kafka-storage.sh format`.
+
+### Service "No Main Manifest Attribute" Error
+
+If services fail with `no main manifest attribute, in app.jar`:
+
+1. **Rebuild the services**:
+   ```bash
+   docker-compose build --no-cache reservation-service
+   docker-compose build --no-cache inventory-service
+   # ... repeat for other services
+   ```
+
+2. **Check build logs**:
+   ```bash
+   docker-compose build reservation-service 2>&1 | tail -50
+   ```
+
+3. **Verify JARs are being created**:
+   The build should show JAR files being created in the target directory.
+
+4. **If issue persists, build locally first**:
+   ```bash
+   mvn clean package -DskipTests
+   # Then rebuild Docker images
+   docker-compose build
+   ```
+
 ### Database Connection Issues
 
 If persistence service can't connect to PostgreSQL:

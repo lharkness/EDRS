@@ -19,8 +19,10 @@ COPY common/src ./common/src
 # Copy service source
 COPY persistence-service/src ./persistence-service/src
 
-# Build
-RUN mvn clean package -pl persistence-service -am -DskipTests
+# Build (ensure Spring Boot plugin creates executable JAR)
+RUN mvn clean package -pl persistence-service -am -DskipTests && \
+    ls -la persistence-service/target/*.jar && \
+    echo "Build completed"
 
 # Runtime stage
 FROM eclipse-temurin:17-jre-alpine

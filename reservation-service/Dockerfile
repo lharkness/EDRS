@@ -19,8 +19,10 @@ COPY common/src ./common/src
 # Copy service source
 COPY reservation-service/src ./reservation-service/src
 
-# Build
-RUN mvn clean package -pl reservation-service -am -DskipTests
+# Build (ensure Spring Boot plugin creates executable JAR)
+RUN mvn clean package -pl reservation-service -am -DskipTests && \
+    ls -la reservation-service/target/*.jar && \
+    echo "Build completed"
 
 # Runtime stage
 FROM eclipse-temurin:17-jre-alpine

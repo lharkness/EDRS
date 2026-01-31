@@ -48,8 +48,6 @@ services:
       # Log configuration
       KAFKA_LOG_DIRS: /var/lib/kafka/data
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
-      # Additional KRaft settings for faster startup
-      KAFKA_METADATA_LOG_DIR: /var/lib/kafka/data/metadata
     volumes:
       - kafka-data:/var/lib/kafka/data
     healthcheck:

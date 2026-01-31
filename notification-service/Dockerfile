@@ -19,8 +19,10 @@ COPY common/src ./common/src
 # Copy service source
 COPY notification-service/src ./notification-service/src
 
-# Build
-RUN mvn clean package -pl notification-service -am -DskipTests
+# Build (ensure Spring Boot plugin creates executable JAR)
+RUN mvn clean package -pl notification-service -am -DskipTests && \
+    ls -la notification-service/target/*.jar && \
+    echo "Build completed"
 
 # Runtime stage
 FROM eclipse-temurin:17-jre-alpine
