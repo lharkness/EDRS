@@ -90,15 +90,15 @@ exporters:
     const_labels:
       collector: "opentelemetry"
   
-  # Optional: Debug exporter for logging
-  logging:
-    loglevel: info
+  # Optional: Debug exporter for logging (replaces deprecated logging exporter)
+  debug:
+    verbosity: normal
 
 service:
   pipelines:
     metrics:
       receivers: [prometheus]
       processors: [batch, resource, transform]
-      exporters: [otlp, logging]
+      exporters: [otlp, debug]
   
   extensions: []
