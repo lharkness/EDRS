@@ -42,27 +42,8 @@ management:
       prometheus:
         enabled: true
 
-# OpenTelemetry Configuration
-opentelemetry:
-  jaeger:
-    endpoint: ${JAEGER_ENDPOINT:http://localhost:14250}
-  service:
-    name: ${OTEL_SERVICE_NAME:reservation-service}
-
-# Actuator endpoints for metrics
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  metrics:
-    export:
-      prometheus:
-        enabled: true
-
 logging:
   level:
     com.edrs: DEBUG
     org.springframework.kafka: INFO
-    io.opentelemetry: INFO
     io.opentelemetry: INFO
