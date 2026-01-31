@@ -6,7 +6,7 @@ Get the entire EDRS system running with one command!
 
 - Docker 20.10+ and Docker Compose 2.0+
 - At least 4GB of available RAM
-- Ports 8080-8090, 5432, 9092, 9093, 16686, 4317-4318 available
+- Ports 8080-8090, 5433 (PostgreSQL), 9092, 9093, 16686, 4317-4318 available
 
 ## One Command to Rule Them All
 
@@ -36,7 +36,7 @@ Once started, access all services at:
 | Inventory API | http://localhost:8081/swagger-ui.html | Inventory Service (includes CSV bulk import) |
 | Kafka UI | http://localhost:8089 | Manage Kafka topics |
 | Jaeger UI | http://localhost:16686 | Distributed tracing |
-| PostgreSQL | localhost:5432 | Database (user: postgres, password: postgres) |
+| PostgreSQL | localhost:5433 | Database (user: postgres, password: postgres) |
 
 ## Verify Everything is Running
 

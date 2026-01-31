@@ -60,7 +60,7 @@ The system consists of five microservices:
 **For Docker deployment (Recommended):**
 - Docker 20.10+ and Docker Compose 2.0+
 - At least 4GB of available RAM
-- Ports 8080-8090, 5432, 9092, 9093, 16686, 4317-4318 available
+- Ports 8080-8090, 5433 (PostgreSQL), 9092, 9093, 16686, 4317-4318 available
 
 **For local development:**
 - Java 17 or higher
@@ -106,7 +106,8 @@ mvn clean install
 
 For local development without Kafka/PostgreSQL, the services will attempt to connect to:
 - Kafka: `localhost:9092`
-- PostgreSQL: `localhost:5432` (database: `edrs`, user: `postgres`, password: `postgres`)
+- PostgreSQL: `localhost:5433` (database: `edrs`, user: `postgres`, password: `postgres`)
+   - Note: Default port is 5433 to avoid conflicts with host PostgreSQL. Override with `POSTGRES_PORT` environment variable.
 
 You can override these using environment variables:
 - `KAFKA_BOOTSTRAP_SERVERS` - Kafka bootstrap servers

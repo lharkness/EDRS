@@ -6,7 +6,7 @@ This guide explains how to deploy the EDRS system using Docker and Docker Compos
 
 - Docker 20.10+ and Docker Compose 2.0+
 - At least 4GB of available RAM
-- Ports 8080-8090, 5432, 9092, 9093, 16686, 4317-4318 available
+- Ports 8080-8090, 5433 (PostgreSQL), 9092, 9093, 16686, 4317-4318 available
 
 ## Quick Start
 
@@ -56,7 +56,8 @@ curl http://localhost:8084/actuator/health  # Persistence Service
   - See [BULK_IMPORT.md](docs/BULK_IMPORT.md) for details
 - **Kafka UI**: http://localhost:8089
 - **Jaeger UI**: http://localhost:16686
-- **PostgreSQL**: localhost:5432 (user: postgres, password: postgres, db: edrs)
+- **PostgreSQL**: localhost:5433 (user: postgres, password: postgres, db: edrs)
+   - Note: Default port is 5433 to avoid conflicts with host PostgreSQL. Override with `POSTGRES_PORT` environment variable.
 
 ## Service Architecture
 
@@ -87,7 +88,7 @@ docker-compose build --no-cache reservation-service
 export POSTGRES_DB=edrs
 export POSTGRES_USER=postgres
 export POSTGRES_PASSWORD=your_password
-export POSTGRES_PORT=5432
+export POSTGRES_PORT=5433  # Default is 5433 to avoid conflicts with host PostgreSQL
 ```
 
 ### Kafka Configuration
