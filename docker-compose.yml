@@ -256,6 +256,21 @@ services:
       - edrs-network
     restart: unless-stopped
 
+  # Web UI (AngularJS SPA)
+  web-ui:
+    build:
+      context: ./web-ui
+      dockerfile: Dockerfile
+    container_name: edrs-web-ui
+    ports:
+      - "8000:8000"
+    depends_on:
+      - reservation-service
+      - inventory-service
+    networks:
+      - edrs-network
+    restart: unless-stopped
+
 volumes:
   postgres-data:
     driver: local

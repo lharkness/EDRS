@@ -407,7 +407,7 @@ class PersistenceServiceTest {
             InventoryItem savedItem = itemCaptor.getValue();
             assertEquals(itemId, savedItem.getId());
             assertEquals(quantity, savedItem.getAvailableQuantity());
-            assertEquals("Item " + itemId, savedItem.getName());
+            assertEquals("Test Item", savedItem.getName());
             verify(eventProcessingService).markEventAsProcessed(eventId, correlationId, "InventoryReceivedEvent");
             verify(eventProcessingService).markEventLogAsProcessed(eventId);
         }

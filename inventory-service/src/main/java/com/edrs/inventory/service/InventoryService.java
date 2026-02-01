@@ -42,9 +42,21 @@ public class InventoryService {
     }
 
     private void initializeSampleInventory() {
-        inventoryStore.put("item1", new InventoryItem("item1", "Laptop", "Dell Laptop", Integer.valueOf(10), "Electronics"));
-        inventoryStore.put("item2", new InventoryItem("item2", "Projector", "HD Projector", Integer.valueOf(5), "Electronics"));
-        inventoryStore.put("item3", new InventoryItem("item3", "Conference Room A", "Large conference room", Integer.valueOf(1), "Rooms"));
+        // Initialize sample items in memory
+        InventoryItem item1 = new InventoryItem("item1", "Laptop", "Dell Laptop", Integer.valueOf(10), "Electronics");
+        InventoryItem item2 = new InventoryItem("item2", "Projector", "HD Projector", Integer.valueOf(5), "Electronics");
+        InventoryItem item3 = new InventoryItem("item3", "Conference Room A", "Large conference room", Integer.valueOf(1), "Rooms");
+        
+        inventoryStore.put("item1", item1);
+        inventoryStore.put("item2", item2);
+        inventoryStore.put("item3", item3);
+        
+        // Publish events to persist sample items in the persistence service
+        // This ensures the persistence service knows about these items for reservation processing
+        logger.info("Publishing sample inventory items to persistence service");
+        publishInventoryReceivedEvent(item1);
+        publishInventoryReceivedEvent(item2);
+        publishInventoryReceivedEvent(item3);
     }
 
     public List<InventoryItem> listInventory(InventoryFilter filter) {
