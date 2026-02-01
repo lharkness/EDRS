@@ -38,14 +38,15 @@ public class ReservationEventListener {
             logger.info("Received reservation created event with correlationId: {}", event.getCorrelationId());
             
             ReservationResponse response = new ReservationResponse();
-            response.setConfirmationNumber(event.getConfirmationNumber());
+            // Use correlationId as confirmationNumber since that's what was originally stored
+            response.setConfirmationNumber(event.getCorrelationId().toString());
             response.setUserId(event.getUserId());
-            response.setInventoryItemIds(event.getInventoryItemIds());
+            response.setInventoryItemQuantities(event.getInventoryItemQuantities());
             response.setReservationDate(event.getReservationDate());
             response.setStatus("CONFIRMED");
             
             reservationService.updateReservation(response);
-            logger.info("Updated reservation store with confirmation number: {}", event.getConfirmationNumber());
+            logger.info("Updated reservation store with confirmation number: {}", event.getCorrelationId());
         } catch (Exception e) {
             logger.error("Error processing reservation created event", e);
         }

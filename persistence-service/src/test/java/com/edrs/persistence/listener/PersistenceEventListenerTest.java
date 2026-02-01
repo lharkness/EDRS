@@ -18,6 +18,8 @@ import org.springframework.kafka.support.Acknowledgment;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -53,8 +55,10 @@ class PersistenceEventListenerTest {
     @Test
     void testHandleReservationRequested_Success() throws Exception {
         // Given
+        Map<String, Integer> itemQuantities = new HashMap<>();
+        itemQuantities.put("item1", 1);
         ReservationRequestedEvent event = new ReservationRequestedEvent(
-                correlationId, "user123", Arrays.asList("item1"), LocalDateTime.now(), LocalDateTime.now());
+                correlationId, "user123", itemQuantities, LocalDateTime.now(), LocalDateTime.now());
         
         when(objectMapper.readValue(record.value(), ReservationRequestedEvent.class)).thenReturn(event);
         doNothing().when(persistenceService).processReservationRequest(any(), any());
@@ -86,8 +90,10 @@ class PersistenceEventListenerTest {
     @Test
     void testHandleReservationRequested_ServiceException() throws Exception {
         // Given
+        Map<String, Integer> itemQuantities = new HashMap<>();
+        itemQuantities.put("item1", 1);
         ReservationRequestedEvent event = new ReservationRequestedEvent(
-                correlationId, "user123", Arrays.asList("item1"), LocalDateTime.now(), LocalDateTime.now());
+                correlationId, "user123", itemQuantities, LocalDateTime.now(), LocalDateTime.now());
         
         when(objectMapper.readValue(record.value(), ReservationRequestedEvent.class)).thenReturn(event);
         doThrow(new RuntimeException("Service error"))
@@ -104,8 +110,10 @@ class PersistenceEventListenerTest {
     @Test
     void testHandleReservationRequested_NullAcknowledgment() throws Exception {
         // Given
+        Map<String, Integer> itemQuantities = new HashMap<>();
+        itemQuantities.put("item1", 1);
         ReservationRequestedEvent event = new ReservationRequestedEvent(
-                correlationId, "user123", Arrays.asList("item1"), LocalDateTime.now(), LocalDateTime.now());
+                correlationId, "user123", itemQuantities, LocalDateTime.now(), LocalDateTime.now());
         
         when(objectMapper.readValue(record.value(), ReservationRequestedEvent.class)).thenReturn(event);
         doNothing().when(persistenceService).processReservationRequest(any(), any());
@@ -154,7 +162,7 @@ class PersistenceEventListenerTest {
     void testHandleInventoryReceived_Success() throws Exception {
         // Given
         InventoryReceivedEvent.InventoryReceiveRecord recordItem = 
-                new InventoryReceivedEvent.InventoryReceiveRecord("item1", 10);
+                new InventoryReceivedEvent.InventoryReceiveRecord("item1", 10, "Test Item", "Test Description", "Test Category");
         InventoryReceivedEvent event = new InventoryReceivedEvent(
                 correlationId, Arrays.asList(recordItem), LocalDateTime.now());
         
@@ -195,8 +203,10 @@ class PersistenceEventListenerTest {
 
         // When - use reflection to test private method, or test through public method
         // For now, we'll test that the same record + correlationId produces same eventId
+        Map<String, Integer> itemQuantities = new HashMap<>();
+        itemQuantities.put("item", 1);
         ReservationRequestedEvent event = new ReservationRequestedEvent(
-                correlationId1, "user", Arrays.asList("item"), LocalDateTime.now(), LocalDateTime.now());
+                correlationId1, "user", itemQuantities, LocalDateTime.now(), LocalDateTime.now());
         
         try {
             when(objectMapper.readValue(record1.value(), ReservationRequestedEvent.class)).thenReturn(event);

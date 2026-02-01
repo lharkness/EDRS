@@ -6,9 +6,10 @@ import com.edrs.inventory.dto.InventoryReceiveRequest;
 import com.edrs.inventory.service.CsvInventoryParser;
 import com.edrs.inventory.service.InventoryService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -42,12 +43,59 @@ public class InventoryController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Show inventory item details", description = "Retrieves details for a specific inventory item")
-    public ResponseEntity<InventoryItem> showInventoryItem(@PathVariable String id) {
+    public ResponseEntity<InventoryItem> showInventoryItem(
+            @Parameter(name = "id", description = "Inventory item ID", required = true, example = "item1", in = ParameterIn.PATH)
+            @PathVariable("id") String id) {
         InventoryItem item = inventoryService.getInventoryItem(id);
         if (item == null) {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(item);
+    }
+
+    @PostMapping
+    @Operation(summary = "Add inventory item", description = "Creates a new inventory item with the specified details")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Inventory item created successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid inventory item data", content = @Content),
+        @ApiResponse(responseCode = "409", description = "Inventory item with this ID already exists", content = @Content)
+    })
+    public ResponseEntity<InventoryItem> addInventoryItem(@Valid @RequestBody InventoryItem item) {
+        // Check if item already exists
+        InventoryItem existing = inventoryService.getInventoryItem(item.getId());
+        if (existing != null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+        
+        inventoryService.updateInventoryItem(item);
+        return ResponseEntity.status(HttpStatus.CREATED).body(item);
+    }
+
+    @GetMapping("/{id}/availability")
+    @Operation(summary = "Get effective available quantity", description = "Returns the effective available quantity for an item on a given date, accounting for all confirmed reservations from now until that date")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Effective available quantity calculated successfully"),
+        @ApiResponse(responseCode = "404", description = "Inventory item not found", content = @Content)
+    })
+    public ResponseEntity<AvailabilityResponse> getEffectiveAvailability(
+            @Parameter(name = "id", description = "Inventory item ID", required = true, example = "item1", in = ParameterIn.PATH)
+            @PathVariable("id") String id,
+            @Parameter(name = "date", description = "Target date to check availability for (ISO 8601 format)", required = true, example = "2026-02-15T10:00:00Z", in = ParameterIn.QUERY)
+            @RequestParam("date") @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime date) {
+        Integer effectiveQuantity = inventoryService.getEffectiveAvailableQuantity(id, date);
+        if (effectiveQuantity == null) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        InventoryItem item = inventoryService.getInventoryItem(id);
+        AvailabilityResponse response = new AvailabilityResponse();
+        response.setItemId(id);
+        response.setItemName(item != null ? item.getName() : null);
+        response.setBaseAvailableQuantity(item != null ? item.getAvailableQuantity() : null);
+        response.setEffectiveAvailableQuantity(effectiveQuantity);
+        response.setTargetDate(date);
+        
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/receive")
@@ -88,6 +136,67 @@ public class InventoryController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new BulkImportResponse(0, 0, "Error processing CSV: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Response DTO for effective availability.
+     */
+    @Schema(description = "Response for effective available quantity calculation")
+    public static class AvailabilityResponse {
+        @Schema(description = "Inventory item ID", example = "item1")
+        private String itemId;
+        
+        @Schema(description = "Inventory item name", example = "Laptop")
+        private String itemName;
+        
+        @Schema(description = "Base available quantity (before reservations)", example = "10")
+        private Integer baseAvailableQuantity;
+        
+        @Schema(description = "Effective available quantity (after accounting for reservations)", example = "7")
+        private Integer effectiveAvailableQuantity;
+        
+        @Schema(description = "Target date for availability check", example = "2026-02-15T10:00:00Z")
+        private java.time.LocalDateTime targetDate;
+
+        public String getItemId() {
+            return itemId;
+        }
+
+        public void setItemId(String itemId) {
+            this.itemId = itemId;
+        }
+
+        public String getItemName() {
+            return itemName;
+        }
+
+        public void setItemName(String itemName) {
+            this.itemName = itemName;
+        }
+
+        public Integer getBaseAvailableQuantity() {
+            return baseAvailableQuantity;
+        }
+
+        public void setBaseAvailableQuantity(Integer baseAvailableQuantity) {
+            this.baseAvailableQuantity = baseAvailableQuantity;
+        }
+
+        public Integer getEffectiveAvailableQuantity() {
+            return effectiveAvailableQuantity;
+        }
+
+        public void setEffectiveAvailableQuantity(Integer effectiveAvailableQuantity) {
+            this.effectiveAvailableQuantity = effectiveAvailableQuantity;
+        }
+
+        public java.time.LocalDateTime getTargetDate() {
+            return targetDate;
+        }
+
+        public void setTargetDate(java.time.LocalDateTime targetDate) {
+            this.targetDate = targetDate;
         }
     }
 

@@ -32,7 +32,9 @@ import org.springframework.kafka.support.SendResult;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -153,9 +155,11 @@ class PersistenceServiceTest {
             
             // Given
         String userId = "user123";
-        List<String> inventoryItemIds = Arrays.asList("item1", "item2");
+        Map<String, Integer> inventoryItemQuantities = new HashMap<>();
+        inventoryItemQuantities.put("item1", 2);
+        inventoryItemQuantities.put("item2", 1);
         ReservationRequestedEvent event = new ReservationRequestedEvent(
-                correlationId, userId, inventoryItemIds, reservationDate, LocalDateTime.now());
+                correlationId, userId, inventoryItemQuantities, reservationDate, LocalDateTime.now());
 
         // Mock inventory items with available quantity
         InventoryItem item1 = new InventoryItem();
@@ -170,10 +174,10 @@ class PersistenceServiceTest {
         when(objectMapper.writeValueAsString(event)).thenReturn(eventPayload);
         when(inventoryItemMapper.findById("item1")).thenReturn(item1);
         when(inventoryItemMapper.findById("item2")).thenReturn(item2);
-        when(reservationMapper.countConfirmedReservationsForItemOnDate("item1", reservationDate)).thenReturn(0L);
-        when(reservationMapper.countConfirmedReservationsForItemOnDate("item2", reservationDate)).thenReturn(0L);
+        when(reservationMapper.sumConfirmedReservationQuantitiesForItemOnDate("item1", reservationDate)).thenReturn(0L);
+        when(reservationMapper.sumConfirmedReservationQuantitiesForItemOnDate("item2", reservationDate)).thenReturn(0L);
         doNothing().when(reservationMapper).insert(any(Reservation.class));
-        doNothing().when(reservationMapper).insertReservationItem(anyString(), anyString());
+        doNothing().when(reservationMapper).insertReservationItem(anyString(), anyString(), anyInt());
 
         @SuppressWarnings("unchecked")
         SendResult<String, String> mockSendResult = mock(SendResult.class);
@@ -198,7 +202,7 @@ class PersistenceServiceTest {
         Reservation savedReservation = reservationCaptor.getValue();
         assertEquals(userId, savedReservation.getUserId());
         assertEquals("CONFIRMED", savedReservation.getStatus());
-        verify(reservationMapper, times(inventoryItemIds.size())).insertReservationItem(eq(savedReservation.getConfirmationNumber()), anyString());
+        verify(reservationMapper, times(inventoryItemQuantities.size())).insertReservationItem(eq(savedReservation.getConfirmationNumber()), anyString(), anyInt());
         verify(eventProcessingService).markEventAsProcessed(eventId, correlationId, "ReservationRequestedEvent");
         verify(eventProcessingService).markEventLogAsProcessed(eventId);
         
@@ -219,8 +223,10 @@ class PersistenceServiceTest {
             lenient().when(mockContext.with(any(Span.class))).thenReturn(mockContext);
             
             // Given
+            Map<String, Integer> itemQuantities = new HashMap<>();
+            itemQuantities.put("item1", 1);
             ReservationRequestedEvent event = new ReservationRequestedEvent(
-                    correlationId, "user123", Arrays.asList("item1"), reservationDate, LocalDateTime.now());
+                    correlationId, "user123", itemQuantities, reservationDate, LocalDateTime.now());
             when(eventProcessingService.isEventProcessed(eventId)).thenReturn(true);
 
             // When
@@ -242,8 +248,10 @@ class PersistenceServiceTest {
             lenient().when(mockContext.with(any(Span.class))).thenReturn(mockContext);
             
             // Given
+            Map<String, Integer> itemQuantities = new HashMap<>();
+            itemQuantities.put("item1", 1);
             ReservationRequestedEvent event = new ReservationRequestedEvent(
-                    correlationId, "user123", Arrays.asList("item1"), reservationDate, LocalDateTime.now());
+                    correlationId, "user123", itemQuantities, reservationDate, LocalDateTime.now());
             when(eventProcessingService.isEventProcessed(eventId)).thenReturn(false);
             when(objectMapper.writeValueAsString(event)).thenThrow(new JsonProcessingException("JSON error") {});
 
@@ -369,7 +377,7 @@ class PersistenceServiceTest {
             String itemId = "item1";
             int quantity = 10;
             InventoryReceivedEvent.InventoryReceiveRecord record = 
-                    new InventoryReceivedEvent.InventoryReceiveRecord(itemId, quantity);
+                    new InventoryReceivedEvent.InventoryReceiveRecord(itemId, quantity, "Test Item", "Test Description", "Test Category");
             InventoryReceivedEvent event = new InventoryReceivedEvent(
                     correlationId, Arrays.asList(record), LocalDateTime.now());
 
@@ -423,7 +431,7 @@ class PersistenceServiceTest {
         existingItem.setAvailableQuantity(existingQuantity);
 
         InventoryReceivedEvent.InventoryReceiveRecord record = 
-                new InventoryReceivedEvent.InventoryReceiveRecord(itemId, additionalQuantity);
+                new InventoryReceivedEvent.InventoryReceiveRecord(itemId, additionalQuantity, "Test Item", "Test Description", "Test Category");
         InventoryReceivedEvent event = new InventoryReceivedEvent(
                 correlationId, Arrays.asList(record), LocalDateTime.now());
 
@@ -453,9 +461,9 @@ class PersistenceServiceTest {
             lenient().when(mockContext.with(any(Span.class))).thenReturn(mockContext);
         // Given
         InventoryReceivedEvent.InventoryReceiveRecord record1 = 
-                new InventoryReceivedEvent.InventoryReceiveRecord("item1", 10);
+                new InventoryReceivedEvent.InventoryReceiveRecord("item1", 10, "Item 1", "Description 1", "Category 1");
         InventoryReceivedEvent.InventoryReceiveRecord record2 = 
-                new InventoryReceivedEvent.InventoryReceiveRecord("item2", 5);
+                new InventoryReceivedEvent.InventoryReceiveRecord("item2", 5, "Item 2", "Description 2", "Category 2");
         InventoryReceivedEvent event = new InventoryReceivedEvent(
                 correlationId, Arrays.asList(record1, record2), LocalDateTime.now());
 
@@ -483,7 +491,7 @@ class PersistenceServiceTest {
             
             // Given
             InventoryReceivedEvent.InventoryReceiveRecord record = 
-                    new InventoryReceivedEvent.InventoryReceiveRecord("item1", 10);
+                    new InventoryReceivedEvent.InventoryReceiveRecord("item1", 10, "Test Item", "Test Description", "Test Category");
             InventoryReceivedEvent event = new InventoryReceivedEvent(
                     correlationId, Arrays.asList(record), LocalDateTime.now());
             when(eventProcessingService.isEventProcessed(eventId)).thenReturn(true);
@@ -508,7 +516,7 @@ class PersistenceServiceTest {
             
             // Given
             InventoryReceivedEvent.InventoryReceiveRecord record = 
-                    new InventoryReceivedEvent.InventoryReceiveRecord("item1", 10);
+                    new InventoryReceivedEvent.InventoryReceiveRecord("item1", 10, "Test Item", "Test Description", "Test Category");
             InventoryReceivedEvent event = new InventoryReceivedEvent(
                     correlationId, Arrays.asList(record), LocalDateTime.now());
 
@@ -540,18 +548,20 @@ class PersistenceServiceTest {
         // First reservation request - should succeed
         UUID firstCorrelationId = UUID.randomUUID();
         UUID firstEventId = UUID.randomUUID();
+        Map<String, Integer> firstItemQuantities = new HashMap<>();
+        firstItemQuantities.put(itemId, 1);
         ReservationRequestedEvent firstEvent = new ReservationRequestedEvent(
-                firstCorrelationId, "user1", Arrays.asList(itemId), futureDate, LocalDateTime.now());
+                firstCorrelationId, "user1", firstItemQuantities, futureDate, LocalDateTime.now());
         
         String firstEventPayload = "{\"correlationId\":\"" + firstCorrelationId + "\"}";
         when(eventProcessingService.isEventProcessed(firstEventId)).thenReturn(false);
         when(objectMapper.writeValueAsString(firstEvent)).thenReturn(firstEventPayload);
         when(inventoryItemMapper.findById(itemId)).thenReturn(item);
-        when(reservationMapper.countConfirmedReservationsForItemOnDate(itemId, futureDate))
+        when(reservationMapper.sumConfirmedReservationQuantitiesForItemOnDate(itemId, futureDate))
                 .thenReturn(0L) // No existing reservations initially
                 .thenReturn(1L); // After first reservation, 1 is reserved
         doNothing().when(reservationMapper).insert(any(Reservation.class));
-        doNothing().when(reservationMapper).insertReservationItem(anyString(), anyString());
+        doNothing().when(reservationMapper).insertReservationItem(anyString(), anyString(), anyInt());
         when(objectMapper.writeValueAsString(any(ReservationCreatedEvent.class)))
                 .thenReturn("{\"confirmationNumber\":\"CONF-001\"}");
 
@@ -570,8 +580,10 @@ class PersistenceServiceTest {
         // Now: Second reservation request for same item on same date - should fail
         UUID secondCorrelationId = UUID.randomUUID();
         UUID secondEventId = UUID.randomUUID();
+        Map<String, Integer> secondItemQuantities = new HashMap<>();
+        secondItemQuantities.put(itemId, 1);
         ReservationRequestedEvent secondEvent = new ReservationRequestedEvent(
-                secondCorrelationId, "user2", Arrays.asList(itemId), futureDate, LocalDateTime.now());
+                secondCorrelationId, "user2", secondItemQuantities, futureDate, LocalDateTime.now());
         
         String secondEventPayload = "{\"correlationId\":\"" + secondCorrelationId + "\"}";
         when(eventProcessingService.isEventProcessed(secondEventId)).thenReturn(false);

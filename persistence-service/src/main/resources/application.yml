@@ -35,6 +35,8 @@ spring:
       auto-offset-reset: earliest
       enable-auto-commit: false
       isolation-level: read_committed
+    listener:
+      ack-mode: manual
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer

@@ -1,0 +1,8 @@
+{
+  "receiveRecords": [
+    {
+      "inventoryItemId": "item1",
+      "quantity": 5
+    }
+  ]
+}

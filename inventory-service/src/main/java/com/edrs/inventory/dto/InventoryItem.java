@@ -1,16 +1,30 @@
 package com.edrs.inventory.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class InventoryItem {
+    @NotBlank(message = "Inventory item ID is required")
     private String id;
+    
+    @NotBlank(message = "Name is required")
     private String name;
+    
     private String description;
-    private int availableQuantity;
+    
+    @NotNull(message = "Available quantity is required")
+    @Min(value = 0, message = "Available quantity must be non-negative")
+    private Integer availableQuantity;
+    
     private String category;
 
     public InventoryItem() {
     }
 
-    public InventoryItem(String id, String name, String description, int availableQuantity, String category) {
+    public InventoryItem(String id, String name, String description, Integer availableQuantity, String category) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -42,11 +56,11 @@ public class InventoryItem {
         this.description = description;
     }
 
-    public int getAvailableQuantity() {
+    public Integer getAvailableQuantity() {
         return availableQuantity;
     }
 
-    public void setAvailableQuantity(int availableQuantity) {
+    public void setAvailableQuantity(Integer availableQuantity) {
         this.availableQuantity = availableQuantity;
     }
 

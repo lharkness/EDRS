@@ -2,15 +2,17 @@ package com.edrs.persistence.entity;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Reservation entity for MyBatis.
- * Note: inventoryItemIds are stored in a separate reservation_items table.
+ * Note: inventoryItemIds and quantities are stored in a separate reservation_items table.
  */
 public class Reservation {
     private String confirmationNumber;
     private String userId;
-    private List<String> inventoryItemIds; // Loaded separately via ReservationMapper
+    private List<String> inventoryItemIds; // Loaded separately via ReservationMapper (legacy)
+    private Map<String, Integer> inventoryItemQuantities; // Loaded separately via ReservationMapper
     private LocalDateTime reservationDate;
     private String status;
     private LocalDateTime createdAt;
@@ -38,6 +40,14 @@ public class Reservation {
 
     public void setInventoryItemIds(List<String> inventoryItemIds) {
         this.inventoryItemIds = inventoryItemIds;
+    }
+
+    public Map<String, Integer> getInventoryItemQuantities() {
+        return inventoryItemQuantities;
+    }
+
+    public void setInventoryItemQuantities(Map<String, Integer> inventoryItemQuantities) {
+        this.inventoryItemQuantities = inventoryItemQuantities;
     }
 
     public LocalDateTime getReservationDate() {

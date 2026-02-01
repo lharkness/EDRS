@@ -36,6 +36,7 @@ Once started, access all services at:
 | Inventory API | http://localhost:8081/swagger-ui.html | Inventory Service (includes CSV bulk import) |
 | Kafka UI | http://localhost:8089 | Manage Kafka topics |
 | Jaeger UI | http://localhost:16686 | Distributed tracing |
+| **Dozzle** | http://localhost:9999 | **Docker log viewer with web UI** |
 | PostgreSQL | localhost:5433 | Database (user: postgres, password: postgres) |
 
 ## Verify Everything is Running
@@ -74,10 +75,28 @@ make init-topics
 docker-compose down
 ```
 
+## Quick Rebuild
+
+For a clean rebuild with all changes:
+
+```bash
+# Windows (PowerShell)
+.\rebuild.ps1
+
+# Linux/Mac (Bash)
+./rebuild.sh
+
+# Or use Make
+make rebuild
+```
+
+See [README_REBUILD.md](README_REBUILD.md) for details.
+
 ## Next Steps
 
 - Read [DOCKER.md](DOCKER.md) for detailed deployment instructions
 - Read [readme.md](readme.md) for architecture and development setup
+- Read [REBUILD_GUIDE.md](REBUILD_GUIDE.md) for clean rebuild procedures
 - Check out the [sequence diagrams](docs/sequence-diagrams.puml) to understand event flows
 
 ## Troubleshooting

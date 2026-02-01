@@ -51,10 +51,52 @@
           AND r.status = 'CONFIRMED'
     </select>
 
+    <select id="countConfirmedReservationsForItemInDateRange" resultType="long">
+        SELECT COUNT(DISTINCT r.confirmation_number)
+        FROM reservations r
+        INNER JOIN reservation_items ri ON r.confirmation_number = ri.confirmation_number
+        WHERE ri.inventory_item_id = #{itemId}
+          AND r.reservation_date >= #{startDate}
+          AND r.reservation_date &lt;= #{endDate}
+          AND r.status = 'CONFIRMED'
+    </select>
+
+    <select id="sumConfirmedReservationQuantitiesForItemOnDate" resultType="long">
+        SELECT COALESCE(SUM(ri.quantity), 0)
+        FROM reservations r
+        INNER JOIN reservation_items ri ON r.confirmation_number = ri.confirmation_number
+        WHERE ri.inventory_item_id = #{itemId}
+          AND r.reservation_date = #{reservationDate}
+          AND r.status = 'CONFIRMED'
+    </select>
+
+    <select id="sumConfirmedReservationQuantitiesForItemInDateRange" resultType="long">
+        SELECT COALESCE(SUM(ri.quantity), 0)
+        FROM reservations r
+        INNER JOIN reservation_items ri ON r.confirmation_number = ri.confirmation_number
+        WHERE ri.inventory_item_id = #{itemId}
+          AND r.reservation_date >= #{startDate}
+          AND r.reservation_date &lt;= #{endDate}
+          AND r.status = 'CONFIRMED'
+    </select>
+
+    <resultMap id="ReservationItemResultMap" type="com.edrs.persistence.entity.ReservationItem">
+        <result property="confirmationNumber" column="confirmation_number"/>
+        <result property="inventoryItemId" column="inventory_item_id"/>
+        <result property="quantity" column="quantity"/>
+    </resultMap>
+
     <insert id="insertReservationItem">
-        INSERT INTO reservation_items (confirmation_number, inventory_item_id)
-        VALUES (#{confirmationNumber}, #{inventoryItemId})
+        INSERT INTO reservation_items (confirmation_number, inventory_item_id, quantity)
+        VALUES (#{confirmationNumber}, #{inventoryItemId}, COALESCE(#{quantity}, 1))
     </insert>
+
+    <select id="findReservationItems" parameterType="string" resultMap="ReservationItemResultMap">
+        SELECT confirmation_number, inventory_item_id, quantity
+        FROM reservation_items
+        WHERE confirmation_number = #{confirmationNumber}
+        ORDER BY inventory_item_id
+    </select>
 
     <select id="findReservationItemIds" parameterType="string" resultType="string">
         SELECT inventory_item_id

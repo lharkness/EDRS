@@ -37,13 +37,22 @@ public class InventoryReceivedEvent {
     public static class InventoryReceiveRecord {
         private final String inventoryItemId;
         private final int quantity;
+        private final String name;
+        private final String description;
+        private final String category;
 
         @JsonCreator
         public InventoryReceiveRecord(
                 @JsonProperty("inventoryItemId") String inventoryItemId,
-                @JsonProperty("quantity") int quantity) {
+                @JsonProperty("quantity") int quantity,
+                @JsonProperty("name") String name,
+                @JsonProperty("description") String description,
+                @JsonProperty("category") String category) {
             this.inventoryItemId = inventoryItemId;
             this.quantity = quantity;
+            this.name = name;
+            this.description = description;
+            this.category = category;
         }
 
         public String getInventoryItemId() {
@@ -52,6 +61,18 @@ public class InventoryReceivedEvent {
 
         public int getQuantity() {
             return quantity;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public String getCategory() {
+            return category;
         }
     }
 }

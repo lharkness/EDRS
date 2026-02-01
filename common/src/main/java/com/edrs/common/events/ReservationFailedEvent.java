@@ -4,13 +4,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class ReservationFailedEvent {
     private final UUID correlationId;
     private final String userId;
-    private final List<String> inventoryItemIds;
+    private final Map<String, Integer> inventoryItemQuantities;
     private final LocalDateTime reservationDate;
     private final String reason;
     private final LocalDateTime timestamp;
@@ -19,13 +19,13 @@ public class ReservationFailedEvent {
     public ReservationFailedEvent(
             @JsonProperty("correlationId") UUID correlationId,
             @JsonProperty("userId") String userId,
-            @JsonProperty("inventoryItemIds") List<String> inventoryItemIds,
+            @JsonProperty("inventoryItemQuantities") Map<String, Integer> inventoryItemQuantities,
             @JsonProperty("reservationDate") LocalDateTime reservationDate,
             @JsonProperty("reason") String reason,
             @JsonProperty("timestamp") LocalDateTime timestamp) {
         this.correlationId = correlationId;
         this.userId = userId;
-        this.inventoryItemIds = inventoryItemIds;
+        this.inventoryItemQuantities = inventoryItemQuantities;
         this.reservationDate = reservationDate;
         this.reason = reason;
         this.timestamp = timestamp;
@@ -39,8 +39,8 @@ public class ReservationFailedEvent {
         return userId;
     }
 
-    public List<String> getInventoryItemIds() {
-        return inventoryItemIds;
+    public Map<String, Integer> getInventoryItemQuantities() {
+        return inventoryItemQuantities;
     }
 
     public LocalDateTime getReservationDate() {

@@ -7,11 +7,14 @@ EDRS is a microservices-based reservation system built with Spring Boot, Kafka, 
 **Key Features:**
 - ✅ Event-driven microservices architecture
 - ✅ Docker Compose deployment (one command to start everything)
+- ✅ **Quantity-based reservations** - Reserve multiple units per item
+- ✅ **Effective availability calculation** - Accounts for reserved quantities
 - ✅ Bulk CSV inventory import
 - ✅ Distributed tracing with OpenTelemetry and Jaeger
 - ✅ HikariCP connection pooling with metrics
 - ✅ Event sourcing and idempotency
 - ✅ Centralized Swagger UI for all APIs
+- ✅ Automated rebuild scripts for clean deployments
 
 ## Architecture
 
@@ -25,8 +28,10 @@ The system consists of five microservices:
 2. **Inventory Service** (Port 8081)
    - REST API for managing inventory items
    - **Bulk CSV import** for inventory (POST `/api/inventory/receive/bulk`)
+   - **Effective availability calculation** (GET `/api/inventory/{id}/availability`)
    - Swagger UI available at `/swagger-ui.html`
    - Publishes inventory receive events to Kafka
+   - Queries persistence service for reservation quantities
 
 3. **Notification Service** (Port 8082)
    - Listens for reservation and cancellation events
@@ -91,6 +96,7 @@ This will start:
 - OpenTelemetry Collector
 - Kafka UI for topic management
 - **Centralized Swagger UI** (aggregates all service APIs)
+- **Dozzle** - Docker log viewer with web UI (http://localhost:9999)
 
 See [DOCKER.md](DOCKER.md) for detailed Docker deployment instructions.
 
@@ -156,15 +162,19 @@ mvn spring-boot:run -pl persistence-service
 
 ### Reservation Service (http://localhost:8080)
 
-- `POST /api/reservations` - Create a reservation
-- `POST /api/reservations/{confirmationNumber}/cancel` - Cancel a reservation
+- `POST /api/reservations` - Create a reservation with quantities
+  - Request body: `{"userId": "user1", "inventoryItemQuantities": {"item1": 2, "item2": 1}, "reservationDate": "2026-02-15T10:00:00Z"}`
+- `GET /api/reservations` - List all reservations (optional `?userId=user1` filter)
 - `GET /api/reservations/{confirmationNumber}` - Get reservation details
+- `POST /api/reservations/{confirmationNumber}/cancel` - Cancel a reservation
 - `GET /swagger-ui.html` - Swagger UI
 
 ### Inventory Service (http://localhost:8081)
 
 - `GET /api/inventory` - List inventory items (supports filtering)
 - `GET /api/inventory/{id}` - Get inventory item details
+- `POST /api/inventory` - Add/create a new inventory item
+- `GET /api/inventory/{id}/availability?date={isoDateTime}` - Get effective available quantity (accounts for reservations)
 - `POST /api/inventory/receive` - Receive inventory
 - `POST /api/inventory/receive/bulk` - **Bulk import inventory from CSV file**
 - `GET /swagger-ui.html` - Swagger UI
@@ -174,10 +184,10 @@ See [BULK_IMPORT.md](docs/BULK_IMPORT.md) for CSV format and usage details.
 ## Event Flow
 
 1. **Reservation Request Flow:**
-   - User creates reservation via Reservation Service API
-   - Reservation Service publishes `reservation-requested` event
-   - Persistence Service checks inventory availability for requested items and date
-   - If available: Persistence Service stores reservation and publishes `reservation-created` event
+   - User creates reservation via Reservation Service API with quantities (e.g., `{"item1": 2, "item2": 1}`)
+   - Reservation Service publishes `reservation-requested` event with quantities
+   - Persistence Service checks inventory availability for requested items, quantities, and date
+   - If available: Persistence Service stores reservation with quantities and publishes `reservation-created` event
    - If unavailable: Persistence Service publishes `reservation-failed` event
    - Notification Service sends confirmation email (on success) or failure notification
    - Reservation Service updates local cache (on success)
@@ -251,7 +261,8 @@ The Persistence Service uses **MyBatis** for database interactions with **Hikari
 
 **Business Tables:**
 - `reservations` - Stores reservation information
-- `reservation_items` - Stores inventory items for each reservation (collection table)
+- `reservation_items` - Stores inventory items for each reservation with quantities (collection table)
+  - Columns: `confirmation_number`, `inventory_item_id`, `quantity`
 - `inventory_items` - Stores inventory item details and available quantities
 
 **Event Sourcing & Idempotency Tables:**
@@ -473,6 +484,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
    ```bash
    curl http://localhost:8080/actuator/health  # Reservation Service
    curl http://localhost:8081/actuator/health  # Inventory Service
+   curl http://localhost:8084/actuator/health  # Persistence Service
    # ... etc
    ```
 
@@ -486,8 +498,9 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
    ```
 
 3. **Test End-to-End Flow:**
-   - Create inventory via Inventory Service API
-   - Create a reservation via Reservation Service API
+   - Create inventory via Inventory Service API: `POST /api/inventory`
+   - Create a reservation with quantities: `POST /api/reservations` with `{"userId": "user1", "inventoryItemQuantities": {"item1": 2}, "reservationDate": "2026-02-15T10:00:00Z"}`
+   - Check effective availability: `GET /api/inventory/{id}/availability?date={isoDateTime}`
    - Verify reservation appears in database
    - Check logs for event flow
 
@@ -628,6 +641,9 @@ edrs-parent/
 
 - **[QUICKSTART.md](QUICKSTART.md)** - Get started in one command
 - **[DOCKER.md](DOCKER.md)** - Complete Docker deployment guide
+- **[REBUILD_GUIDE.md](REBUILD_GUIDE.md)** - Manual clean rebuild steps
+- **[README_REBUILD.md](README_REBUILD.md)** - Automated rebuild scripts documentation
+- **[docs/API_EXAMPLES.md](docs/API_EXAMPLES.md)** - Practical API usage examples with quantities
 - **[docs/BULK_IMPORT.md](docs/BULK_IMPORT.md)** - CSV bulk inventory import guide
 - **[docs/HIKARICP_METRICS.md](docs/HIKARICP_METRICS.md)** - HikariCP metrics with OpenTelemetry
 - **[docs/sequence-diagrams.puml](docs/sequence-diagrams.puml)** - Event flow sequence diagrams

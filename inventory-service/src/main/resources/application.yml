@@ -24,7 +24,21 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
 logging:
   level:
     com.edrs: DEBUG
     org.springframework.kafka: INFO
+
+persistence:
+  service:
+    url: ${PERSISTENCE_SERVICE_URL:http://persistence-service:8084}

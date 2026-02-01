@@ -1,23 +1,23 @@
 package com.edrs.reservation.dto;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Map;
 
 public class ReservationResponse {
     private String confirmationNumber;
     private String userId;
-    private List<String> inventoryItemIds;
+    private Map<String, Integer> inventoryItemQuantities;
     private LocalDateTime reservationDate;
     private String status;
 
     public ReservationResponse() {
     }
 
-    public ReservationResponse(String confirmationNumber, String userId, List<String> inventoryItemIds, 
+    public ReservationResponse(String confirmationNumber, String userId, Map<String, Integer> inventoryItemQuantities, 
                               LocalDateTime reservationDate, String status) {
         this.confirmationNumber = confirmationNumber;
         this.userId = userId;
-        this.inventoryItemIds = inventoryItemIds;
+        this.inventoryItemQuantities = inventoryItemQuantities;
         this.reservationDate = reservationDate;
         this.status = status;
     }
@@ -38,12 +38,12 @@ public class ReservationResponse {
         this.userId = userId;
     }
 
-    public List<String> getInventoryItemIds() {
-        return inventoryItemIds;
+    public Map<String, Integer> getInventoryItemQuantities() {
+        return inventoryItemQuantities;
     }
 
-    public void setInventoryItemIds(List<String> inventoryItemIds) {
-        this.inventoryItemIds = inventoryItemIds;
+    public void setInventoryItemQuantities(Map<String, Integer> inventoryItemQuantities) {
+        this.inventoryItemQuantities = inventoryItemQuantities;
     }
 
     public LocalDateTime getReservationDate() {

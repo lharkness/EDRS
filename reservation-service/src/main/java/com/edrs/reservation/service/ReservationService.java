@@ -33,14 +33,14 @@ public class ReservationService {
         this.objectMapper = objectMapper;
     }
 
-    public String makeReservation(String userId, java.util.List<String> inventoryItemIds, LocalDateTime reservationDate) {
+    public String makeReservation(String userId, java.util.Map<String, Integer> inventoryItemQuantities, LocalDateTime reservationDate) {
         UUID correlationId = CorrelationIdUtil.generateCorrelationId();
-        logger.info("Making reservation request with correlationId: {}", correlationId);
+        logger.info("Making reservation request with correlationId: {}, items: {}", correlationId, inventoryItemQuantities);
 
         ReservationRequestedEvent event = new ReservationRequestedEvent(
                 correlationId,
                 userId,
-                inventoryItemIds,
+                inventoryItemQuantities,
                 reservationDate,
                 LocalDateTime.now()
         );
@@ -82,5 +82,14 @@ public class ReservationService {
 
     public void updateReservation(ReservationResponse reservation) {
         reservationStore.put(reservation.getConfirmationNumber(), reservation);
+    }
+
+    public java.util.List<ReservationResponse> listReservations(String userId) {
+        if (userId != null && !userId.isEmpty()) {
+            return reservationStore.values().stream()
+                    .filter(reservation -> userId.equals(reservation.getUserId()))
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        return new java.util.ArrayList<>(reservationStore.values());
     }
 }

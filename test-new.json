@@ -1,0 +1,7 @@
+{
+  "id": "test123",
+  "name": "Test Item",
+  "description": "Test Description",
+  "availableQuantity": 5,
+  "category": "Test"
+}

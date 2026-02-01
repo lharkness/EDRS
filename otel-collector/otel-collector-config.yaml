@@ -67,14 +67,15 @@ processors:
       - key: service.namespace
         value: edrs
         action: upsert
-      # Service name will be preserved from Prometheus labels automatically
 
 exporters:
   # OTLP exporter for Jaeger/OpenTelemetry backend
   otlp:
-    endpoint: jaeger:4317
+    endpoint: localhost:4317
     tls:
       insecure: true
+    headers:
+      x-api-key: ""
   
   # Optional: Also export to Prometheus for compatibility
   prometheus:
@@ -82,15 +83,15 @@ exporters:
     const_labels:
       collector: "opentelemetry"
   
-  # Optional: Debug exporter for logging (replaces deprecated logging exporter)
+  # Optional: Debug exporter for logging
   debug:
-    verbosity: normal
+    verbosity: basic
 
 service:
   pipelines:
     metrics:
       receivers: [prometheus]
       processors: [batch, resource]
-      exporters: [otlp, debug]
+      exporters: [prometheus, debug]
   
   extensions: []

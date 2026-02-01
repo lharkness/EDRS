@@ -53,9 +53,11 @@ curl http://localhost:8084/actuator/health  # Persistence Service
 - **Reservation Service API**: http://localhost:8080/swagger-ui.html
 - **Inventory Service API**: http://localhost:8081/swagger-ui.html
   - Includes **CSV bulk import** endpoint: `POST /api/inventory/receive/bulk`
+  - Includes **availability calculation** endpoint: `GET /api/inventory/{id}/availability?date={isoDateTime}`
   - See [BULK_IMPORT.md](docs/BULK_IMPORT.md) for details
 - **Kafka UI**: http://localhost:8089
 - **Jaeger UI**: http://localhost:16686
+- **Dozzle** (Log Viewer): http://localhost:9999
 - **PostgreSQL**: localhost:5433 (user: postgres, password: postgres, db: edrs)
    - Note: Default port is 5433 to avoid conflicts with host PostgreSQL. Override with `POSTGRES_PORT` environment variable.
 
@@ -406,6 +408,25 @@ docker-compose down -v
 ```
 
 ## Updating Services
+
+### Quick Rebuild (Recommended)
+
+Use the automated rebuild scripts for a clean rebuild:
+
+```bash
+# Windows (PowerShell)
+.\rebuild.ps1
+
+# Linux/Mac (Bash)
+./rebuild.sh
+
+# Or use Make
+make rebuild
+```
+
+See [README_REBUILD.md](README_REBUILD.md) for script options and details.
+
+### Manual Update
 
 ```bash
 # Pull latest code

@@ -15,6 +15,16 @@ spring:
 server:
   port: 8083
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
 logging:
   level:
     com.edrs: DEBUG

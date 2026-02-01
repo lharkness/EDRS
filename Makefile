@@ -31,6 +31,18 @@ clean: ## Stop services and remove volumes (⚠️ deletes data)
 	docker-compose down -v
 	docker system prune -f
 
+rebuild: ## Complete clean rebuild (stops, removes volumes, rebuilds without cache, starts)
+	@echo "Performing complete clean rebuild..."
+	docker-compose down -v
+	@echo "Removing old EDRS images..."
+	@docker images --format "{{.Repository}}:{{.Tag}}" | grep "edrs-" | xargs -r docker rmi -f || true
+	docker system prune -f
+	docker-compose build --no-cache
+	docker-compose up -d
+	@echo "Waiting for services to start..."
+	@sleep 10
+	@make health
+
 test: ## Run tests
 	mvn test
 

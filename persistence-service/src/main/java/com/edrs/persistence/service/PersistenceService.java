@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -112,7 +113,7 @@ public class PersistenceService {
                 .setAttribute("event.type", "ReservationRequestedEvent")
                 .setAttribute("correlation.id", event.getCorrelationId().toString())
                 .setAttribute("user.id", event.getUserId())
-                .setAttribute("inventory.items.count", event.getInventoryItemIds().size())
+                .setAttribute("inventory.items.count", event.getInventoryItemQuantities().size())
                 .startSpan();
         
         try (Scope scope = span.makeCurrent()) {
@@ -145,7 +146,7 @@ public class PersistenceService {
                     .startSpan();
             String unavailabilityReason;
             try (Scope availabilityScope = availabilitySpan.makeCurrent()) {
-                unavailabilityReason = checkInventoryAvailability(event.getInventoryItemIds(), event.getReservationDate());
+                unavailabilityReason = checkInventoryAvailability(event.getInventoryItemQuantities(), event.getReservationDate());
                 availabilitySpan.setAttribute("availability.available", unavailabilityReason == null);
                 if (unavailabilityReason != null) {
                     availabilitySpan.setAttribute("availability.reason", unavailabilityReason);
@@ -167,7 +168,7 @@ public class PersistenceService {
                 ReservationFailedEvent failedEvent = new ReservationFailedEvent(
                         event.getCorrelationId(),
                         event.getUserId(),
-                        event.getInventoryItemIds(),
+                        event.getInventoryItemQuantities(),
                         event.getReservationDate(),
                         unavailabilityReason,
                         LocalDateTime.now()
@@ -201,9 +202,9 @@ public class PersistenceService {
             
             reservationMapper.insert(reservation);
             
-            // Insert reservation items
-            for (String itemId : event.getInventoryItemIds()) {
-                reservationMapper.insertReservationItem(confirmationNumber, itemId);
+            // Insert reservation items with quantities
+            for (Map.Entry<String, Integer> entry : event.getInventoryItemQuantities().entrySet()) {
+                reservationMapper.insertReservationItem(confirmationNumber, entry.getKey(), entry.getValue());
             }
             
             logger.info("Persisted reservation with confirmation number: {}", confirmationNumber);
@@ -221,7 +222,7 @@ public class PersistenceService {
                     event.getCorrelationId(),
                     confirmationNumber,
                     event.getUserId(),
-                    event.getInventoryItemIds(),
+                    event.getInventoryItemQuantities(),
                     event.getReservationDate(),
                     LocalDateTime.now()
             );
@@ -388,15 +389,26 @@ public class PersistenceService {
                     InventoryItem item = inventoryItemMapper.findById(record.getInventoryItemId());
                     
                     if (item == null) {
-                        // Create new item
+                        // Create new item with metadata from event
                         item = new InventoryItem();
                         item.setId(record.getInventoryItemId());
-                        item.setName("Item " + record.getInventoryItemId());
-                        item.setDescription("Auto-created item");
-                        item.setCategory("General");
+                        item.setName(record.getName() != null ? record.getName() : "Item " + record.getInventoryItemId());
+                        item.setDescription(record.getDescription() != null ? record.getDescription() : "Auto-created item");
+                        item.setCategory(record.getCategory() != null ? record.getCategory() : "General");
                         item.setAvailableQuantity(0);
                         item.setCreatedAt(LocalDateTime.now());
                         item.setUpdatedAt(LocalDateTime.now());
+                    } else {
+                        // Update metadata if provided in event (for existing items)
+                        if (record.getName() != null) {
+                            item.setName(record.getName());
+                        }
+                        if (record.getDescription() != null) {
+                            item.setDescription(record.getDescription());
+                        }
+                        if (record.getCategory() != null) {
+                            item.setCategory(record.getCategory());
+                        }
                     }
                     
                     item.setAvailableQuantity(item.getAvailableQuantity() + record.getQuantity());
@@ -408,8 +420,8 @@ public class PersistenceService {
                         inventoryItemMapper.insert(item);
                     }
                     
-                    logger.info("Updated inventory item {} with quantity {}", 
-                               record.getInventoryItemId(), item.getAvailableQuantity());
+                    logger.info("Updated inventory item {} with quantity {} (name: {}, category: {})", 
+                               record.getInventoryItemId(), item.getAvailableQuantity(), item.getName(), item.getCategory());
                     inventoryUpdatesCounter.add(1);
                 }
                 
@@ -451,25 +463,46 @@ public class PersistenceService {
     }
 
     /**
-     * Checks inventory availability for the requested items on the specified date.
+     * Counts confirmed reservations for a specific inventory item in a date range.
+     * Used for calculating effective availability.
+     * @deprecated Use sumReservationQuantitiesForItemInDateRange instead
+     */
+    @Deprecated
+    public long countReservationsForItemInDateRange(String itemId, LocalDateTime startDate, LocalDateTime endDate) {
+        return reservationMapper.countConfirmedReservationsForItemInDateRange(itemId, startDate, endDate);
+    }
+
+    /**
+     * Sums quantities from confirmed reservations for a specific inventory item in a date range.
+     * Used for calculating effective availability with quantities.
+     */
+    public long sumReservationQuantitiesForItemInDateRange(String itemId, LocalDateTime startDate, LocalDateTime endDate) {
+        return reservationMapper.sumConfirmedReservationQuantitiesForItemInDateRange(itemId, startDate, endDate);
+    }
+
+    /**
+     * Checks inventory availability for the requested items with quantities on the specified date.
      * Returns null if all items are available, or a reason string if unavailable.
      */
-    private String checkInventoryAvailability(List<String> inventoryItemIds, LocalDateTime reservationDate) {
-        for (String itemId : inventoryItemIds) {
+    private String checkInventoryAvailability(Map<String, Integer> inventoryItemQuantities, LocalDateTime reservationDate) {
+        for (Map.Entry<String, Integer> entry : inventoryItemQuantities.entrySet()) {
+            String itemId = entry.getKey();
+            int requestedQuantity = entry.getValue();
+            
             // Get inventory item
             InventoryItem item = inventoryItemMapper.findById(itemId);
             if (item == null) {
                 return "Inventory item not found: " + itemId;
             }
             
-            // Count existing confirmed reservations for this item on this date
-            long reservedCount = reservationMapper.countConfirmedReservationsForItemOnDate(itemId, reservationDate);
+            // Sum quantities from existing confirmed reservations for this item on this date
+            long reservedQuantity = reservationMapper.sumConfirmedReservationQuantitiesForItemOnDate(itemId, reservationDate);
             
-            // Check if there's availability (availableQuantity - reservedCount > 0)
-            long availableCount = item.getAvailableQuantity() - reservedCount;
-            if (availableCount <= 0) {
-                return String.format("Insufficient availability for item %s on %s. Available: %d, Reserved: %d", 
-                        itemId, reservationDate, item.getAvailableQuantity(), reservedCount);
+            // Check if there's availability (availableQuantity - reservedQuantity >= requestedQuantity)
+            long availableCount = item.getAvailableQuantity() - reservedQuantity;
+            if (availableCount < requestedQuantity) {
+                return String.format("Insufficient availability for item %s on %s. Available: %d, Reserved: %d, Requested: %d", 
+                        itemId, reservationDate, item.getAvailableQuantity(), reservedQuantity, requestedQuantity);
             }
         }
         return null; // All items are available

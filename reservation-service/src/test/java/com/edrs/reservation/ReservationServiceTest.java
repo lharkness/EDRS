@@ -25,10 +25,12 @@ public class ReservationServiceTest {
         ReservationService reservationService = new ReservationService(kafkaTemplate, objectMapper);
         
         String userId = "user123";
-        var inventoryItemIds = Arrays.asList("item1", "item2");
+        var inventoryItemQuantities = new java.util.HashMap<String, Integer>();
+        inventoryItemQuantities.put("item1", 2);
+        inventoryItemQuantities.put("item2", 1);
         LocalDateTime reservationDate = LocalDateTime.now().plusDays(1);
 
-        reservationService.makeReservation(userId, inventoryItemIds, reservationDate);
+        reservationService.makeReservation(userId, inventoryItemQuantities, reservationDate);
 
         verify(kafkaTemplate).send(eq("reservation-requested"), any(String.class), any(String.class));
     }
