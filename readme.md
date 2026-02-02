@@ -217,6 +217,32 @@ The Web UI is automatically started with Docker Compose. Simply navigate to http
 
 For more details, see [web-ui/README.md](web-ui/README.md).
 
+### Screenshots
+
+#### Login Screen
+![Login Screen](doc_assets/login.png)
+The login page with simple authentication. Any username works (stub implementation).
+
+#### Make a Reservation
+![New Reservation Screen](doc_assets/newReservation.png)
+Create a new reservation by selecting inventory items, choosing a date/time, and specifying quantities. The form shows effective availability that accounts for existing reservations.
+
+#### Reservation Submitted
+![Reservation Submitted](doc_assets/reservationSubmitted.png)
+Confirmation screen after successfully submitting a reservation.
+
+#### My Reservations
+![Reservation List](doc_assets/reservationList.png)
+View all your reservations with the ability to cancel active ones. Shows item names, dates, and status.
+
+#### Inventory List
+![Inventory List](doc_assets/inventoryList.png)
+Browse all available inventory items. The "Available Quantity" column shows effective availability (accounting for all active reservations), with total inventory shown in parentheses when different.
+
+#### Admin View
+![Admin View](doc_assets/admin.png)
+Admin users (usernames starting with "admin") see additional navigation options: "All Reservations" to view reservations from all users, and "Add Inventory" to create new inventory items.
+
 ## Event Flow
 
 1. **Reservation Request Flow:**
