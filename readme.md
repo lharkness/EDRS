@@ -7,6 +7,7 @@ EDRS is a microservices-based reservation system built with Spring Boot, Kafka, 
 **Key Features:**
 - ✅ Event-driven microservices architecture
 - ✅ Docker Compose deployment (one command to start everything)
+- ✅ **Web UI** - Single-page AngularJS application with Bootstrap (http://localhost:8000)
 - ✅ **Quantity-based reservations** - Reserve multiple units per item
 - ✅ **Effective availability calculation** - Accounts for reserved quantities
 - ✅ Bulk CSV inventory import
@@ -18,14 +19,21 @@ EDRS is a microservices-based reservation system built with Spring Boot, Kafka, 
 
 ## Architecture
 
-The system consists of five microservices:
+The system consists of five microservices and a web UI:
 
-1. **Reservation Service** (Port 8080)
+1. **Web UI** (Port 8000)
+   - Single-page AngularJS application with Bootstrap
+   - User-friendly interface for making reservations and managing inventory
+   - Features: Login, Make Reservations, View Reservations, Inventory Management
+   - Admin features: View all reservations, Add inventory items
+   - See [web-ui/README.md](web-ui/README.md) for details
+
+2. **Reservation Service** (Port 8080)
    - REST API for creating and managing reservations
    - Swagger UI available at `/swagger-ui.html`
    - Publishes reservation and cancellation requests to Kafka
 
-2. **Inventory Service** (Port 8081)
+3. **Inventory Service** (Port 8081)
    - REST API for managing inventory items
    - **Bulk CSV import** for inventory (POST `/api/inventory/receive/bulk`)
    - **Effective availability calculation** (GET `/api/inventory/{id}/availability`)
@@ -33,15 +41,15 @@ The system consists of five microservices:
    - Publishes inventory receive events to Kafka
    - Queries persistence service for reservation quantities
 
-3. **Notification Service** (Port 8082)
+4. **Notification Service** (Port 8082)
    - Listens for reservation and cancellation events
    - Sends mock email notifications (ready for integration with email service)
 
-4. **Logging Service** (Port 8083)
+5. **Logging Service** (Port 8083)
    - Logs all events with correlation IDs for tracing
    - Provides visibility into system activity
 
-5. **Persistence Service** (Port 8084)
+6. **Persistence Service** (Port 8084)
    - Handles all database operations
    - Listens to events and persists data to PostgreSQL
    - Publishes confirmation events
@@ -59,13 +67,16 @@ The system consists of five microservices:
 - **Swagger/OpenAPI** for API documentation
 - **OpenTelemetry 1.32.0** (Distributed tracing and metrics)
 - **Docker & Docker Compose** (Containerization)
+- **AngularJS 1.8.3** (Web UI framework)
+- **Bootstrap 5.3.0** (UI styling)
+- **Nginx** (Web server for UI)
 
 ## Prerequisites
 
 **For Docker deployment (Recommended):**
 - Docker 20.10+ and Docker Compose 2.0+
 - At least 4GB of available RAM
-- Ports 8080-8090, 5433 (PostgreSQL), 9094 (Kafka broker), 9095 (Kafka controller), 16686, 4317-4318 available
+- Ports 8000 (Web UI), 8080-8090, 5433 (PostgreSQL), 9094 (Kafka broker), 9095 (Kafka controller), 16686, 4317-4318 available
 
 **For local development:**
 - Java 17 or higher
@@ -89,6 +100,7 @@ docker-compose ps
 ```
 
 This will start:
+- **Web UI** (http://localhost:8000) - AngularJS single-page application
 - All 5 microservices
 - PostgreSQL database
 - Kafka with KRaft (no Zookeeper required)
@@ -180,6 +192,30 @@ mvn spring-boot:run -pl persistence-service
 - `GET /swagger-ui.html` - Swagger UI
 
 See [BULK_IMPORT.md](docs/BULK_IMPORT.md) for CSV format and usage details.
+
+## Web UI
+
+The system includes a modern web-based user interface accessible at **http://localhost:8000**.
+
+### Features
+
+- **Login** - Simple authentication (stub implementation, any username works)
+- **Make Reservations** - Create reservations with:
+  - Inventory item selection from dropdown
+  - Date and time picker
+  - Quantity selection for each item
+  - **Effective availability display** - Shows available quantity accounting for existing reservations
+- **My Reservations** - View and cancel your own reservations
+- **Inventory List** - Browse all available inventory items
+- **Admin Features** (for users with usernames starting with "admin"):
+  - View all reservations from all users
+  - Add new inventory items
+
+### Usage
+
+The Web UI is automatically started with Docker Compose. Simply navigate to http://localhost:8000 in your browser after starting the services.
+
+For more details, see [web-ui/README.md](web-ui/README.md).
 
 ## Event Flow
 

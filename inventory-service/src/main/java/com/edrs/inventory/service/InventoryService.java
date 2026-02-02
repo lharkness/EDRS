@@ -207,12 +207,14 @@ if (item != null) {
         int baseQuantity = item.getAvailableQuantity() != null ? item.getAvailableQuantity() : 0;
         
         try {
-            // Query persistence service for reservation quantities from now until target date
-            LocalDateTime now = LocalDateTime.now();
+            // Query persistence service for reservation quantities from a date far in the past until target date
+            // This ensures we account for all active reservations, not just future ones
+            // Use 1 year ago as the start date to capture all relevant reservations
+            LocalDateTime startDate = LocalDateTime.now().minusYears(1);
             // Format dates in ISO format without nanoseconds for Spring's DateTimeFormat parser
             // ISO_DATE_TIME format: yyyy-MM-ddTHH:mm:ss (no nanoseconds)
             java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
-            String startDateStr = now.format(formatter);
+            String startDateStr = startDate.format(formatter);
             String endDateStr = targetDate.format(formatter);
             
             // Use UriComponentsBuilder for proper URL encoding

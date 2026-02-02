@@ -15,6 +15,7 @@ docker-compose up -d --build
 ```
 
 That's it! This single command will start:
+- ✅ **Web UI** - AngularJS single-page application (http://localhost:8000)
 - ✅ All 5 microservices (Reservation, Inventory, Notification, Logging, Persistence)
 - ✅ PostgreSQL database (with automatic schema creation)
 - ✅ Kafka with KRaft (no Zookeeper required)
@@ -23,7 +24,6 @@ That's it! This single command will start:
 - ✅ Kafka UI for topic management
 - ✅ **Centralized Swagger UI** (all APIs in one place!)
 - ✅ **Bulk CSV import** capability (via Inventory Service)
-- ✅ **Bulk CSV import** capability (via Inventory Service)
 
 ## Access Everything
 
@@ -31,6 +31,7 @@ Once started, access all services at:
 
 | Service | URL | Description |
 |---------|-----|-------------|
+| **Web UI** | http://localhost:8000 | **Main user interface - Make reservations, manage inventory** |
 | **Swagger UI** | http://localhost:8090 | **All APIs in one place!** |
 | Reservation API | http://localhost:8080/swagger-ui.html | Reservation Service |
 | Inventory API | http://localhost:8081/swagger-ui.html | Inventory Service (includes CSV bulk import) |

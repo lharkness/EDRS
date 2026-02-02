@@ -6,7 +6,7 @@ This guide explains how to deploy the EDRS system using Docker and Docker Compos
 
 - Docker 20.10+ and Docker Compose 2.0+
 - At least 4GB of available RAM
-- Ports 8080-8090, 5433 (PostgreSQL), 9094 (Kafka broker), 9095 (Kafka controller), 16686, 4317-4318 available
+- Ports 8000 (Web UI), 8080-8090, 5433 (PostgreSQL), 9094 (Kafka broker), 9095 (Kafka controller), 16686, 4317-4318 available
 
 ## Quick Start
 
@@ -49,6 +49,10 @@ curl http://localhost:8084/actuator/health  # Persistence Service
 
 ### 3. Access Services
 
+- **Web UI** (Main User Interface): http://localhost:8000
+  - AngularJS single-page application
+  - Make reservations, view inventory, manage reservations
+  - See [web-ui/README.md](web-ui/README.md) for details
 - **Centralized Swagger UI** (All APIs): http://localhost:8090
 - **Reservation Service API**: http://localhost:8080/swagger-ui.html
 - **Inventory Service API**: http://localhost:8081/swagger-ui.html
@@ -65,12 +69,13 @@ curl http://localhost:8084/actuator/health  # Persistence Service
 
 The Docker Compose setup includes:
 
-1. **Database**: PostgreSQL 15 (with automatic schema initialization)
-2. **Message Broker**: Kafka 7.5.0 with KRaft (no Zookeeper required)
-3. **Services**: All 5 EDRS microservices
-4. **Observability**: Jaeger + OpenTelemetry Collector (scrapes HikariCP metrics)
-5. **Management**: Kafka UI + Centralized Swagger UI
-6. **Features**: Bulk CSV inventory import available via Inventory Service API
+1. **Web UI**: AngularJS single-page application served via Nginx (Port 8000)
+2. **Database**: PostgreSQL 15 (with automatic schema initialization)
+3. **Message Broker**: Kafka 7.5.0 with KRaft (no Zookeeper required)
+4. **Services**: All 5 EDRS microservices
+5. **Observability**: Jaeger + OpenTelemetry Collector (scrapes HikariCP metrics)
+6. **Management**: Kafka UI + Centralized Swagger UI
+7. **Features**: Bulk CSV inventory import available via Inventory Service API
 
 ## Building Individual Services
 

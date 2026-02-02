@@ -435,6 +435,30 @@
                 };
                 // Reset the dropdown selection
                 vm.selectedItemId = '';
+                
+                // If date is set, fetch effective availability for this newly added item
+                if (vm.reservationDate) {
+                    var dateObj = new Date(vm.reservationDate);
+                    var isoDate = dateObj.toISOString();
+                    ApiService.getEffectiveAvailability(item.id, isoDate).then(
+                        function(response) {
+                            // Update the item in selectedItems
+                            if (vm.selectedItems[item.id]) {
+                                vm.selectedItems[item.id].item.effectiveAvailableQuantity = response.data.effectiveAvailableQuantity;
+                            }
+                            // Also update in the main inventory list
+                            for (var j = 0; j < vm.inventoryItems.length; j++) {
+                                if (vm.inventoryItems[j].id === item.id) {
+                                    vm.inventoryItems[j].effectiveAvailableQuantity = response.data.effectiveAvailableQuantity;
+                                    break;
+                                }
+                            }
+                        },
+                        function(error) {
+                            console.warn('Could not get effective availability for ' + item.id, error);
+                        }
+                    );
+                }
             };
             
             vm.removeItem = function(itemId) {
@@ -644,7 +668,7 @@
         }]);
 
         // Inventory Controller
-        app.controller('InventoryController', ['ApiService', function(ApiService) {
+        app.controller('InventoryController', ['ApiService', '$scope', function(ApiService, $scope) {
             var vm = this;
             vm.inventoryItems = [];
             vm.loading = false;
@@ -655,6 +679,8 @@
                 ApiService.getInventory().then(
                     function(response) {
                         vm.inventoryItems = response.data;
+                        // Fetch effective availability for all items (using current date/time)
+                        vm.updateEffectiveAvailability();
                         vm.loading = false;
                     },
                     function(error) {
@@ -662,6 +688,52 @@
                         vm.loading = false;
                     }
                 );
+            };
+            
+            vm.updateEffectiveAvailability = function() {
+                if (vm.inventoryItems.length === 0) {
+                    return;
+                }
+                
+                // Use current date/time for availability check
+                var now = new Date();
+                var isoDate = now.toISOString();
+                
+                console.log('Updating effective availability for', vm.inventoryItems.length, 'items at', isoDate);
+                
+                // Update effective availability for all items
+                for (var i = 0; i < vm.inventoryItems.length; i++) {
+                    var item = vm.inventoryItems[i];
+                    var itemId = item.id; // Capture itemId for closure
+                    
+                    (function(id) { // IIFE to properly capture itemId
+                        ApiService.getEffectiveAvailability(id, isoDate).then(
+                            function(response) {
+                                var responseItemId = response.data.itemId;
+                                console.log('Got effective availability for', responseItemId, ':', response.data.effectiveAvailableQuantity);
+                                // Find and update the item
+                                for (var j = 0; j < vm.inventoryItems.length; j++) {
+                                    if (vm.inventoryItems[j].id === responseItemId) {
+                                        vm.inventoryItems[j].effectiveAvailableQuantity = response.data.effectiveAvailableQuantity;
+                                        break;
+                                    }
+                                }
+                            },
+                            function(error) {
+                                // Log error but continue
+                                console.warn('Could not get effective availability for ' + id, error);
+                            }
+                        );
+                    })(itemId);
+                }
+            };
+            
+            // Helper function to get effective available quantity (or base if not loaded)
+            vm.getAvailableQuantity = function(item) {
+                if (item.effectiveAvailableQuantity !== undefined && item.effectiveAvailableQuantity !== null) {
+                    return item.effectiveAvailableQuantity;
+                }
+                return item.availableQuantity || 0;
             };
             
             vm.loadInventory();
@@ -980,7 +1052,17 @@
                 '                <td><strong>{{item.name}}</strong></td>' +
                 '                <td>{{item.description || \'-\'}}</td>' +
                 '                <td><span class="badge bg-info" ng-if="item.category">{{item.category}}</span></td>' +
-                '                <td><span class="badge" ng-class="{\'bg-success\': item.availableQuantity > 0, \'bg-warning\': item.availableQuantity === 0}">{{item.availableQuantity}}</span></td>' +
+                '                <td>' +
+                '                  <span class="badge" ng-class="{\'bg-success\': vm.getAvailableQuantity(item) > 0, \'bg-warning\': vm.getAvailableQuantity(item) === 0}">' +
+                '                    <strong>{{vm.getAvailableQuantity(item)}}</strong>' +
+                '                    <span ng-if="item.effectiveAvailableQuantity !== undefined && item.effectiveAvailableQuantity !== item.availableQuantity" class="ms-1">' +
+                '                      ({{item.availableQuantity}} total)' +
+                '                    </span>' +
+                '                  </span>' +
+                '                  <small class="text-muted d-block mt-1" ng-if="item.effectiveAvailableQuantity !== undefined && item.effectiveAvailableQuantity !== item.availableQuantity">' +
+                '                    Effective availability (accounts for reservations)' +
+                '                  </small>' +
+                '                </td>' +
                 '              </tr>' +
                 '            </tbody>' +
                 '          </table>' +
